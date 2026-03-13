@@ -40,6 +40,7 @@
     - [19.13 Build & Dependencies](#1913-build--dependency-troubleshooting)
     - [19.14 Troubleshooting Decision Tree](#1914-troubleshooting-decision-tree)
     - [19.15 Quick Health Check Script](#1915-quick-health-check-script)
+20. [Visual Diagrams — Interactive & Animated](#20-visual-diagrams--interactive--animated)
 
 ---
 
@@ -47,57 +48,53 @@
 
 Mousike is a two-service microservice platform that demonstrates production-grade AI/LLM application patterns using Spring Boot 4 and Spring AI 2.0.
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         User / Browser                              │
-│                   (Vaadin UI or REST API calls)                     │
-└──────────┬──────────────────────────────────────────────────────────┘
-           │ HTTP :8080
-           ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                    mousike-app (Spring Boot 4)                       │
-│                                                                      │
-│  ┌──────────┐  ┌──────────┐  ┌───────────┐  ┌──────────────────┐   │
-│  │  Chat    │  │   RAG    │  │  Search   │  │  Classification  │   │
-│  │ Service  │  │ Pipeline │  │  Service  │  │  & Extraction    │   │
-│  └────┬─────┘  └──┬───┬──┘  └─────┬─────┘  └────────┬─────────┘   │
-│       │           │   │            │                  │              │
-│       │     ┌─────┘   └─────┐      │                  │              │
-│       ▼     ▼               ▼      ▼                  ▼              │
-│  ┌────────────┐     ┌────────────────────┐   ┌───────────────┐      │
-│  │  ChatClient │     │   Guardrails       │   │  ChatClient   │      │
-│  │  + Memory   │     │ (3-layer defense)  │   │  (structured) │      │
-│  └──────┬─────┘     └─────────┬──────────┘   └──────┬────────┘      │
-│         │                     │                      │               │
-│         └─────────┬───────────┘──────────────────────┘               │
-│                   ▼                                                   │
-│           ┌──────────────┐        ┌──────────────────┐              │
-│           │  Ollama LLM  │        │  PGVector Store  │              │
-│           │  (llama3.2)  │        │  (768-dim HNSW)  │              │
-│           └──────────────┘        └──────────────────┘              │
-│                                          ▲                           │
-│                   MCP Client ────────────┼───────────────────────────│
-│                   (SSE/HTTP)             │                           │
-└──────────────────────┬───────────────────┼───────────────────────────┘
-                       │                   │
-                       ▼                   │
-┌──────────────────────────────────────────┼───────────────────────────┐
-│            document-service (:8090)      │                           │
-│                                          │                           │
-│  ┌────────────────┐  ┌──────────────┐    │                           │
-│  │  Ingestion     │  │  MCP Server  │────┘                           │
-│  │  Pipeline      │  │  (3 tools)   │                                │
-│  │  (Tika→Chunk→  │  └──────────────┘                                │
-│  │   Embed→Store) │                                                  │
-│  └────────────────┘                                                  │
-└──────────────────────────────────────────────────────────────────────┘
-                       │
-          ┌────────────┼────────────────┐
-          ▼            ▼                ▼
-  ┌──────────────┐ ┌──────────┐  ┌─────────────┐
-  │  PostgreSQL  │ │  Ollama  │  │  Phoenix &  │
-  │  + PGVector  │ │  (host)  │  │  Grafana    │
-  └──────────────┘ └──────────┘  └─────────────┘
+> **Interactive diagram**: Open [`docs/diagrams/01-architecture-overview.html`](diagrams/01-architecture-overview.html) for the animated version.
+
+```mermaid
+graph TB
+    User["User / Browser<br/><i>Vaadin UI · REST API · cURL</i>"]
+
+    subgraph mousike-app["mousike-app :8080"]
+        direction TB
+        Chat["Chat Service<br/><i>Memory · Streaming</i>"]
+        RAG["RAG Pipeline<br/><i>Naive · Advanced · Agentic</i>"]
+        Search["Semantic Search<br/><i>Filtered · Ranked</i>"]
+        Structured["Classification<br/>& Extraction"]
+        Guard["3-Layer Guardrails<br/><i>RetrievalGate → Prompt → OutputValidator</i>"]
+        MCPClient["MCP Client<br/><i>SSE Transport</i>"]
+        OTel["OTel Exporter<br/><i>Dual: Phoenix + Grafana</i>"]
+    end
+
+    subgraph doc-svc["document-service :8090"]
+        direction TB
+        Ingest["Ingestion Pipeline<br/><i>Tika → Chunk → Embed</i>"]
+        MCPServer["MCP Server<br/><i>3 @Tool methods</i>"]
+    end
+
+    subgraph infra["Infrastructure"]
+        PG["PostgreSQL + PGVector<br/><i>HNSW · 768-dim · Cosine</i>"]
+        Ollama["Ollama<br/><i>llama3.2 · nomic-embed-text</i>"]
+        Phoenix["Phoenix :6006<br/><i>LLM Trace Viz</i>"]
+        Grafana["Grafana LGTM :3000<br/><i>Metrics · Logs · Traces</i>"]
+    end
+
+    User -->|"HTTP :8080"| mousike-app
+    Chat & RAG & Search & Structured --> Ollama
+    RAG --> Guard
+    RAG & Search --> PG
+    MCPClient -->|"SSE :8090"| MCPServer
+    MCPServer --> PG
+    Ingest --> PG
+    Ingest --> Ollama
+    OTel -->|"OTLP HTTP"| Phoenix
+    OTel -->|"OTLP HTTP"| Grafana
+
+    style mousike-app fill:#161b22,stroke:#1f6feb,color:#c9d1d9
+    style doc-svc fill:#161b22,stroke:#3fb950,color:#c9d1d9
+    style infra fill:#0d1117,stroke:#30363d,color:#8b949e
+    style Guard fill:#161b22,stroke:#f85149,color:#f85149
+    style MCPClient fill:#161b22,stroke:#a371f7,color:#a371f7
+    style MCPServer fill:#161b22,stroke:#a371f7,color:#a371f7
 ```
 
 **Key architectural decisions:**
@@ -422,6 +419,33 @@ public class ChatController {
 
 The application implements three RAG modes, progressively increasing in capability:
 
+> **Interactive diagram**: Open [`docs/diagrams/02-rag-pipeline-flow.html`](diagrams/02-rag-pipeline-flow.html) for the animated version with tab switching between all 3 modes.
+
+```mermaid
+graph LR
+    subgraph Naive["Naive RAG"]
+        N1[RagRetrievalGate<br/>topK=5, threshold=0.65] --> N2[ChatClient + Advisor<br/>topK=5, threshold=0.50]
+        N2 --> N3[OutputValidator<br/>grounding ≥ 0.30]
+    end
+
+    subgraph Advanced["Advanced RAG"]
+        A1[RagRetrievalGate<br/>topK=10, threshold=0.65] --> A2[Inline ChatClient<br/>topK=10, threshold=0.65]
+        A2 --> A3[OutputValidator<br/>grounding ≥ 0.30]
+    end
+
+    subgraph Agentic["Agentic RAG"]
+        AG1[agenticChatClient] -->|"tool_call"| AG2[MCP SSE]
+        AG2 --> AG3[searchMusicKnowledge]
+        AG2 --> AG4[searchByCategory]
+        AG3 -->|"results"| AG1
+        AG4 -->|"results"| AG1
+    end
+
+    style Naive fill:#161b22,stroke:#d29922,color:#c9d1d9
+    style Advanced fill:#161b22,stroke:#1f6feb,color:#c9d1d9
+    style Agentic fill:#161b22,stroke:#a371f7,color:#c9d1d9
+```
+
 ### Mode 1: Naive RAG
 
 The simplest approach. Retrieves documents, asks the LLM, validates the output.
@@ -559,38 +583,27 @@ public ResponseEntity<Map<String, String>> query(
 
 Every RAG query passes through three independent validation layers:
 
-```
-    User Question
-         │
-         ▼
-┌─────────────────────────────────────────┐
-│  LAYER 1: Retrieval Gate                │
-│  • Vector search with 0.65 threshold    │
-│  • Requires ≥ 2 chunks above threshold  │
-│  • BLOCKS if no relevant data exists    │
-└─────────────────┬───────────────────────┘
-                  │ (passes)
-                  ▼
-┌─────────────────────────────────────────┐
-│  LAYER 2: System Prompt Instruction     │
-│  • "Answer ONLY from provided context"  │
-│  • "Say I don't know if insufficient"   │
-│  • "Do NOT hallucinate facts"           │
-└─────────────────┬───────────────────────┘
-                  │ (LLM generates)
-                  ▼
-┌─────────────────────────────────────────┐
-│  LAYER 3: Output Validator              │
-│  • Checks response is not empty         │
-│  • Accepts valid refusals ("I don't     │
-│    have enough information")            │
-│  • Grounding check: ≥ 30% of content   │
-│    words must appear in source chunks   │
-│  • BLOCKS if grounding ratio < 0.30    │
-└─────────────────┬───────────────────────┘
-                  │ (validated)
-                  ▼
-           Response to User
+```mermaid
+flowchart TD
+    Q["User Question"] --> L1
+
+    L1{"LAYER 1: RagRetrievalGate<br/><br/>VectorStore.similaritySearch()<br/>threshold ≥ 0.65 · min 2 chunks"}
+    L1 -->|"≥ 2 chunks found"| L2
+    L1 -->|"0–1 chunks"| R1["REJECTED<br/><i>'I don't have enough<br/>information...'</i>"]
+
+    L2{"LAYER 2: System Prompt<br/><br/>LLM instructed:<br/>'Answer ONLY from context'<br/>'Do NOT hallucinate facts'"}
+    L2 -->|"LLM generates answer"| L3
+
+    L3{"LAYER 3: OutputValidator<br/><br/>Grounding ratio check:<br/>words_in_chunks / total_words<br/>must be ≥ 0.30"}
+    L3 -->|"ratio ≥ 0.30"| OK["Validated Answer<br/><i>Grounded in source docs</i>"]
+    L3 -->|"ratio < 0.30"| R2["REJECTED<br/><i>Hallucination detected</i>"]
+
+    style L1 fill:#161b22,stroke:#d29922,color:#d29922
+    style L2 fill:#161b22,stroke:#a371f7,color:#a371f7
+    style L3 fill:#161b22,stroke:#f85149,color:#f85149
+    style R1 fill:#161b22,stroke:#f85149,color:#f85149
+    style R2 fill:#161b22,stroke:#f85149,color:#f85149
+    style OK fill:#161b22,stroke:#3fb950,color:#3fb950
 ```
 
 ### Layer 1: RagRetrievalGate
@@ -696,6 +709,28 @@ public record RetrievalResult(
 ## 8. MCP (Model Context Protocol) — Client & Server
 
 MCP enables the mousike-app to discover and invoke tools exposed by the document-service at runtime. The LLM decides when and how to call these tools.
+
+> **Interactive diagram**: Open [`docs/diagrams/07-mcp-communication.html`](diagrams/07-mcp-communication.html) for the animated MCP sequence diagram.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant AC as agenticChatClient
+    participant LLM as Ollama llama3.2
+    participant MCP as MCP Server (SSE)
+    participant PG as PGVector
+
+    U->>AC: POST /api/rag/query?mode=agentic
+    AC->>LLM: prompt() with system + user + tools
+    LLM-->>AC: tool_call: searchMusicKnowledge(query, 5, 0.65)
+    AC->>MCP: SSE invoke: searchMusicKnowledge
+    MCP->>PG: similaritySearch(query, topK=5)
+    PG-->>MCP: List<Document>
+    MCP-->>AC: formatted results
+    AC->>LLM: tool_result + "synthesize answer"
+    LLM-->>AC: "Bach composed for organ, violin..."
+    AC-->>U: HTTP 200 {"answer": "..."}
+```
 
 ### Server Side (document-service)
 
@@ -836,6 +871,24 @@ spring:
 ---
 
 ## 9. Document Ingestion Pipeline
+
+> **Interactive diagram**: Open [`docs/diagrams/06-document-ingestion-pipeline.html`](diagrams/06-document-ingestion-pipeline.html) for the animated pipeline with data transformation visualization.
+
+```mermaid
+graph LR
+    PDF["PDF / DOCX<br/><i>ClassPathResource<br/>or MultipartFile</i>"] --> Tika["Apache Tika<br/><i>TikaDocumentReader</i>"]
+    Tika -->|"List‹Document›"| Meta["Metadata<br/>Enrichment<br/><i>source, category,<br/>ingested_at</i>"]
+    Meta --> Split["TokenText<br/>Splitter<br/><i>~800 tokens<br/>per chunk</i>"]
+    Split -->|"List‹Document›<br/>42 chunks"| Embed["Ollama<br/><i>nomic-embed-text</i><br/>text → float[768]"]
+    Embed --> PG["PGVector<br/><i>vectorStore.accept()</i><br/>HNSW Index"]
+
+    style PDF fill:#161b22,stroke:#58a6ff,color:#58a6ff
+    style Tika fill:#161b22,stroke:#d29922,color:#d29922
+    style Meta fill:#161b22,stroke:#3fb950,color:#3fb950
+    style Split fill:#161b22,stroke:#a371f7,color:#a371f7
+    style Embed fill:#161b22,stroke:#a371f7,color:#a371f7
+    style PG fill:#161b22,stroke:#d29922,color:#d29922
+```
 
 ### DocumentIngestionService.java
 
@@ -1051,6 +1104,36 @@ Output: {"name": "Ludwig van Beethoven", "birthYear": 1770, "deathYear": 1827,
 
 ## 13. Observability — OpenTelemetry, Phoenix & Grafana
 
+> **Interactive diagram**: Open [`docs/diagrams/05-observability-trace-flow.html`](diagrams/05-observability-trace-flow.html) for the animated trace flow with span visualization.
+
+```mermaid
+graph TB
+    subgraph app["mousike-app"]
+        AI["Spring AI Observations<br/><i>chat · embedding · vectorstore</i>"]
+        MT["Micrometer Tracing<br/><i>bridge-otel → SdkTracerProvider</i>"]
+        PR["Prometheus Registry<br/><i>micrometer-registry</i>"]
+        LB["Logback OTel Appender<br/><i>traceId in logs</i>"]
+        OC["ObservabilityConfig<br/><i>Dual SpanExporter beans</i>"]
+    end
+
+    AI --> MT
+    MT --> OC
+
+    OC -->|"OTLP HTTP<br/>:6006/v1/traces"| Phoenix["Phoenix<br/><i>LLM Trace Viz</i>"]
+    OC -->|"OTLP HTTP<br/>:4318/v1/traces"| Tempo["Grafana Tempo"]
+
+    PR -->|"Scrape<br/>/actuator/prometheus"| Prom["Prometheus"]
+    LB --> Loki["Loki"]
+
+    Prom --> Grafana["Grafana UI :3000"]
+    Tempo --> Grafana
+    Loki --> Grafana
+
+    style app fill:#161b22,stroke:#1f6feb,color:#c9d1d9
+    style Phoenix fill:#161b22,stroke:#58a6ff,color:#58a6ff
+    style Grafana fill:#161b22,stroke:#3fb950,color:#3fb950
+```
+
 ### ObservabilityConfig.java — Dual Exporter Setup
 
 ```java
@@ -1217,6 +1300,47 @@ public class ChatView extends VerticalLayout {
 
 ## 15. Kubernetes Deployment Architecture
 
+> **Interactive diagram**: Open [`docs/diagrams/04-kubernetes-topology.html`](diagrams/04-kubernetes-topology.html) for the animated cluster topology with health indicators.
+
+```mermaid
+graph TB
+    subgraph host["Host Machine"]
+        Ollama["Ollama :11434<br/><i>llama3.2 + nomic-embed-text</i>"]
+    end
+
+    subgraph cluster["Kind Cluster: mousike-cluster — namespace: rag"]
+        subgraph apps["Application Layer"]
+            M["mousike<br/><i>Deployment · 512Mi-1Gi</i><br/>NodePort 30080→8080"]
+            DS["document-service<br/><i>Deployment · 512Mi-1Gi</i><br/>NodePort 30090→8090"]
+            ING["document-ingester<br/><i>Job · backoffLimit=3</i>"]
+        end
+
+        subgraph infra["Infrastructure Layer"]
+            PG["PostgreSQL + PGVector<br/><i>StatefulSet · PVC 5Gi</i>"]
+            Redis["Redis<br/><i>Deployment · 128Mi</i>"]
+            Docling["Docling<br/><i>Deployment · 2Gi-4Gi</i><br/><i>Slow start: 2-5 min</i>"]
+        end
+
+        subgraph obs["Observability Layer"]
+            Phoenix["Phoenix<br/>NodePort 30600→6006"]
+            GrafanaLGTM["Grafana LGTM<br/>NodePort 30300→3000<br/>OTLP 30418→4318"]
+        end
+    end
+
+    M -->|"MCP/SSE"| DS
+    M & DS --> PG
+    M --> Redis
+    DS --> Docling
+    ING --> PG
+    M -->|"OTLP"| Phoenix & GrafanaLGTM
+    M & DS -->|"host.docker.internal"| Ollama
+
+    style cluster fill:#0d1117,stroke:#30363d,color:#8b949e
+    style apps fill:#161b22,stroke:#1f6feb,color:#c9d1d9
+    style infra fill:#161b22,stroke:#d29922,color:#c9d1d9
+    style obs fill:#161b22,stroke:#58a6ff,color:#c9d1d9
+```
+
 ### Cluster Topology
 
 ```
@@ -1311,6 +1435,45 @@ kubectl apply -f k8s/mousike/
 ---
 
 ## 17. Data Flow Diagrams
+
+> **Interactive diagram**: Open [`docs/diagrams/03-request-lifecycle.html`](diagrams/03-request-lifecycle.html) for the animated sequence diagram with trace timeline visualization.
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant C as ChatController
+    participant S as ChatService
+    participant CC as ChatClient
+    participant DB as PostgreSQL
+    participant O as Ollama llama3.2
+    participant OT as OTel Exporter
+
+    B->>C: POST /api/chat {message, conversationId}
+    activate C
+    C->>S: chatSync(conversationId, message)
+    activate S
+    S->>CC: prompt().user(message).advisors(memoryId).call()
+    activate CC
+
+    CC->>DB: SELECT FROM ai_chat_memory (last 20 msgs)
+    DB-->>CC: conversation history
+
+    CC->>O: /api/chat (system + history + user message)
+    activate O
+    Note over O: llama3.2 generating<br/>temp=0.7, ctx=4096
+    O-->>CC: LLM response
+    deactivate O
+
+    CC->>DB: INSERT INTO ai_chat_memory (USER + ASSISTANT)
+    CC-->>S: response text
+    deactivate CC
+    S-->>C: response text
+    deactivate S
+    C-->>B: HTTP 200 {"response": "...", "conversationId": "..."}
+    deactivate C
+
+    Note over OT: Async: export spans to<br/>Phoenix + Grafana Tempo
+```
 
 ### Flow 1: Chat Message
 
@@ -2597,3 +2760,40 @@ fi
 echo ""
 echo "=== Health Check Complete ==="
 ```
+
+---
+
+## 20. Visual Diagrams — Interactive & Animated
+
+The `docs/diagrams/` directory contains interactive, animated HTML diagrams that visualize every major component and data flow in the Mousike platform. These are self-contained HTML files with CSS animations — no external dependencies required.
+
+### Diagram Gallery
+
+| # | Diagram | File | Description |
+|---|---------|------|-------------|
+| 01 | **Architecture Overview** | [`01-architecture-overview.html`](diagrams/01-architecture-overview.html) | Full system architecture with animated data flow particles between all services, color-coded by layer |
+| 02 | **RAG Pipeline Flow** | [`02-rag-pipeline-flow.html`](diagrams/02-rag-pipeline-flow.html) | Interactive tabs for all 3 RAG modes (Naive/Advanced/Agentic) with animated guardrail gates showing pass/reject |
+| 03 | **Request Lifecycle** | [`03-request-lifecycle.html`](diagrams/03-request-lifecycle.html) | Animated sequence diagram: chat message through Browser → Controller → Service → ChatClient → Ollama → DB, with trace timeline at the bottom |
+| 04 | **Kubernetes Topology** | [`04-kubernetes-topology.html`](diagrams/04-kubernetes-topology.html) | Complete K8s cluster layout with all 7 pods, services, port mappings, resource limits, and animated health indicators |
+| 05 | **Observability & Tracing** | [`05-observability-trace-flow.html`](diagrams/05-observability-trace-flow.html) | Dual OTLP export pipeline to Phoenix + Grafana, with animated span bar visualization showing a real RAG trace |
+| 06 | **Document Ingestion** | [`06-document-ingestion-pipeline.html`](diagrams/06-document-ingestion-pipeline.html) | Step-by-step pipeline with animated data particles: PDF → Tika → Metadata → Splitter → Embedding → PGVector, plus data transformation examples |
+| 07 | **MCP Communication** | [`07-mcp-communication.html`](diagrams/07-mcp-communication.html) | MCP client-server architecture with animated SSE data dots and full tool call sequence diagram |
+
+### How to View
+
+```bash
+# Open any diagram in your default browser
+open docs/diagrams/01-architecture-overview.html
+
+# Or serve all diagrams locally
+cd docs/diagrams && python3 -m http.server 8000
+# Then visit http://localhost:8000
+```
+
+### Design Principles
+
+- **Dark theme** matching GitHub's color palette (`#0d1117` background)
+- **CSS-only animations** — flowing data particles, pulsing health indicators, sequential reveals
+- **SVG-based** for crisp rendering at any resolution
+- **Self-contained** HTML files with no external dependencies
+- **Mermaid diagrams** embedded throughout this document for GitHub-native rendering

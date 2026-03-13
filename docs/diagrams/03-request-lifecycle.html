@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mousike — Animated Request Lifecycle</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d1117; color: #c9d1d9; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 30px 20px; }
+  h1 { font-size: 24px; color: #f0f6fc; margin-bottom: 6px; }
+  .subtitle { color: #8b949e; font-size: 13px; margin-bottom: 30px; }
+  svg { max-width: 1100px; width: 100%; }
+
+  @keyframes dash { to { stroke-dashoffset: -20; } }
+  @keyframes moveRight { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateX(var(--dist, 150px)); opacity: 0; } }
+  @keyframes moveDown { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(var(--dist, 80px)); opacity: 0; } }
+  @keyframes blink { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes trace { 0% { stroke-dashoffset: 1000; } 100% { stroke-dashoffset: 0; } }
+
+  .animated-dash { stroke-dasharray: 6 4; animation: dash 0.8s linear infinite; }
+  .blink { animation: blink 1.5s ease-in-out infinite; }
+
+  /* Particle dots traveling along arrows */
+  .particle { r: 3.5; }
+  .p1 { fill: #58a6ff; offset-path: path('M 90 115 L 210 115'); animation: moveAlongPath 2s ease-in-out infinite; }
+  .p2 { fill: #58a6ff; offset-path: path('M 330 115 L 430 115'); animation: moveAlongPath 2s ease-in-out infinite 0.5s; }
+  .p3 { fill: #a371f7; offset-path: path('M 550 115 L 650 115'); animation: moveAlongPath 2.5s ease-in-out infinite 1s; }
+  .p4 { fill: #3fb950; offset-path: path('M 770 115 L 870 115'); animation: moveAlongPath 2.5s ease-in-out infinite 1.5s; }
+
+  @keyframes moveAlongPath { 0% { offset-distance: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+
+  .timeline-line { stroke: #30363d; stroke-width: 2; }
+  .step-box { animation: fadeInUp 0.4s ease-out both; }
+</style>
+</head>
+<body>
+<h1>Request Lifecycle — Chat Message End-to-End</h1>
+<p class="subtitle">Animated trace showing a chat message flowing through all components</p>
+
+<svg viewBox="0 0 1100 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="aB" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#58a6ff"/></marker>
+    <marker id="aG" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#3fb950"/></marker>
+    <marker id="aP" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#a371f7"/></marker>
+    <marker id="aO" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#d29922"/></marker>
+
+    <linearGradient id="traceGrad" x1="0%" y1="0%" x2="100%"><stop offset="0%" style="stop-color:#1f6feb;stop-opacity:0.2"/><stop offset="100%" style="stop-color:#1f6feb;stop-opacity:0"/></linearGradient>
+  </defs>
+
+  <!-- Title Row: Actors -->
+  <g font-size="12" font-weight="600" text-anchor="middle">
+    <rect x="30" y="20" width="120" height="40" rx="6" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
+    <text x="90" y="44" fill="#58a6ff">Browser</text>
+
+    <rect x="210" y="20" width="120" height="40" rx="6" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
+    <text x="270" y="44" fill="#58a6ff">ChatController</text>
+
+    <rect x="400" y="20" width="120" height="40" rx="6" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
+    <text x="460" y="44" fill="#3fb950">ChatService</text>
+
+    <rect x="590" y="20" width="120" height="40" rx="6" fill="#161b22" stroke="#a371f7" stroke-width="1.5"/>
+    <text x="650" y="44" fill="#a371f7">ChatClient</text>
+
+    <rect x="780" y="20" width="120" height="40" rx="6" fill="#161b22" stroke="#a371f7" stroke-width="1.5"/>
+    <text x="840" y="44" fill="#a371f7">Ollama LLM</text>
+
+    <rect x="960" y="20" width="120" height="40" rx="6" fill="#161b22" stroke="#d29922" stroke-width="1.5"/>
+    <text x="1020" y="44" fill="#d29922">PostgreSQL</text>
+  </g>
+
+  <!-- Vertical lifelines -->
+  <line x1="90" y1="60" x2="90" y2="750" class="timeline-line" stroke-dasharray="3 3"/>
+  <line x1="270" y1="60" x2="270" y2="750" class="timeline-line" stroke-dasharray="3 3"/>
+  <line x1="460" y1="60" x2="460" y2="750" class="timeline-line" stroke-dasharray="3 3"/>
+  <line x1="650" y1="60" x2="650" y2="750" class="timeline-line" stroke-dasharray="3 3"/>
+  <line x1="840" y1="60" x2="840" y2="750" class="timeline-line" stroke-dasharray="3 3"/>
+  <line x1="1020" y1="60" x2="1020" y2="750" class="timeline-line" stroke-dasharray="3 3"/>
+
+  <!-- Step 1: HTTP POST -->
+  <g class="step-box" style="animation-delay:0.1s">
+    <line x1="90" y1="100" x2="260" y2="100" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#aB)" class="animated-dash"/>
+    <rect x="110" y="82" width="130" height="18" rx="3" fill="#0d1117"/>
+    <text x="175" y="95" text-anchor="middle" fill="#58a6ff" font-size="10" font-weight="600">POST /api/chat</text>
+    <circle cx="90" cy="100" r="5" fill="#58a6ff" class="blink"/>
+  </g>
+
+  <!-- Step 2: Create span -->
+  <g class="step-box" style="animation-delay:0.3s">
+    <rect x="238" y="115" width="64" height="20" rx="4" fill="#1f6feb" opacity="0.2" stroke="#1f6feb" stroke-width="0.5"/>
+    <text x="270" y="129" text-anchor="middle" fill="#58a6ff" font-size="8">HTTP Span</text>
+  </g>
+
+  <!-- Step 3: Controller → Service -->
+  <g class="step-box" style="animation-delay:0.4s">
+    <line x1="270" y1="150" x2="450" y2="150" stroke="#3fb950" stroke-width="1.5" marker-end="url(#aG)" class="animated-dash"/>
+    <rect x="310" y="132" width="100" height="18" rx="3" fill="#0d1117"/>
+    <text x="360" y="145" text-anchor="middle" fill="#3fb950" font-size="10">chatSync()</text>
+  </g>
+
+  <!-- Step 4: Load chat memory -->
+  <g class="step-box" style="animation-delay:0.6s">
+    <line x1="460" y1="190" x2="1010" y2="190" stroke="#d29922" stroke-width="1" marker-end="url(#aO)" class="animated-dash"/>
+    <rect x="600" y="172" width="200" height="18" rx="3" fill="#0d1117"/>
+    <text x="700" y="185" text-anchor="middle" fill="#d29922" font-size="10">SELECT FROM ai_chat_memory</text>
+
+    <line x1="1010" y1="210" x2="460" y2="210" stroke="#d29922" stroke-width="1" marker-end="url(#aO)" stroke-dasharray="4 3"/>
+    <rect x="640" y="198" width="140" height="16" rx="3" fill="#0d1117"/>
+    <text x="710" y="210" text-anchor="middle" fill="#8b949e" font-size="9">Last 20 messages</text>
+  </g>
+
+  <!-- Memory advisor -->
+  <g class="step-box" style="animation-delay:0.7s">
+    <rect x="430" y="225" width="60" height="16" rx="3" fill="#3fb950" opacity="0.15" stroke="#3fb950" stroke-width="0.5"/>
+    <text x="460" y="236" text-anchor="middle" fill="#3fb950" font-size="7">Memory</text>
+  </g>
+
+  <!-- Step 5: Service → ChatClient -->
+  <g class="step-box" style="animation-delay:0.8s">
+    <line x1="460" y1="260" x2="640" y2="260" stroke="#a371f7" stroke-width="1.5" marker-end="url(#aP)" class="animated-dash"/>
+    <rect x="490" y="242" width="120" height="18" rx="3" fill="#0d1117"/>
+    <text x="550" y="255" text-anchor="middle" fill="#a371f7" font-size="10">prompt().call()</text>
+  </g>
+
+  <!-- Step 6: Build prompt with system message -->
+  <g class="step-box" style="animation-delay:1.0s">
+    <rect x="618" y="280" width="64" height="45" rx="4" fill="#a371f7" opacity="0.1" stroke="#a371f7" stroke-width="0.5"/>
+    <text x="650" y="295" text-anchor="middle" fill="#a371f7" font-size="8">System</text>
+    <text x="650" y="307" text-anchor="middle" fill="#8b949e" font-size="7">"You are</text>
+    <text x="650" y="317" text-anchor="middle" fill="#8b949e" font-size="7">Mousike..."</text>
+  </g>
+
+  <!-- Step 7: ChatClient → Ollama -->
+  <g class="step-box" style="animation-delay:1.2s">
+    <line x1="650" y1="340" x2="830" y2="340" stroke="#a371f7" stroke-width="1.5" marker-end="url(#aP)" class="animated-dash"/>
+    <rect x="690" y="322" width="110" height="18" rx="3" fill="#0d1117"/>
+    <text x="745" y="335" text-anchor="middle" fill="#a371f7" font-size="10">Ollama /api/chat</text>
+  </g>
+
+  <!-- Ollama processing -->
+  <g class="step-box" style="animation-delay:1.4s">
+    <rect x="808" y="355" width="64" height="80" rx="4" fill="#a371f7" opacity="0.1" stroke="#a371f7" stroke-width="0.5"/>
+    <text x="840" y="375" text-anchor="middle" fill="#a371f7" font-size="8">llama3.2</text>
+    <text x="840" y="390" text-anchor="middle" fill="#8b949e" font-size="7">temp=0.7</text>
+    <text x="840" y="403" text-anchor="middle" fill="#8b949e" font-size="7">ctx=4096</text>
+    <text x="840" y="418" text-anchor="middle" fill="#d29922" font-size="7" class="blink">generating...</text>
+  </g>
+
+  <!-- Step 8: Ollama → ChatClient (response) -->
+  <g class="step-box" style="animation-delay:1.8s">
+    <line x1="830" y1="450" x2="660" y2="450" stroke="#3fb950" stroke-width="1.5" marker-end="url(#aG)" stroke-dasharray="4 3"/>
+    <rect x="700" y="438" width="100" height="16" rx="3" fill="#0d1117"/>
+    <text x="750" y="450" text-anchor="middle" fill="#3fb950" font-size="9">LLM response</text>
+  </g>
+
+  <!-- Step 9: Save to chat memory -->
+  <g class="step-box" style="animation-delay:2.0s">
+    <line x1="460" y1="490" x2="1010" y2="490" stroke="#d29922" stroke-width="1" marker-end="url(#aO)" class="animated-dash"/>
+    <rect x="580" y="472" width="240" height="18" rx="3" fill="#0d1117"/>
+    <text x="700" y="485" text-anchor="middle" fill="#d29922" font-size="10">INSERT INTO ai_chat_memory (USER + ASSISTANT)</text>
+  </g>
+
+  <!-- Step 10: Response flows back -->
+  <g class="step-box" style="animation-delay:2.3s">
+    <line x1="640" y1="520" x2="470" y2="520" stroke="#3fb950" stroke-width="1" marker-end="url(#aG)" stroke-dasharray="4 3"/>
+    <line x1="450" y1="540" x2="280" y2="540" stroke="#3fb950" stroke-width="1" marker-end="url(#aG)" stroke-dasharray="4 3"/>
+    <line x1="260" y1="560" x2="100" y2="560" stroke="#3fb950" stroke-width="1.5" marker-end="url(#aG)"/>
+    <rect x="110" y="548" width="120" height="16" rx="3" fill="#0d1117"/>
+    <text x="170" y="560" text-anchor="middle" fill="#3fb950" font-size="9">{"response": "..."}</text>
+  </g>
+
+  <!-- OTLP trace export (async) -->
+  <g class="step-box" style="animation-delay:2.5s">
+    <rect x="240" y="590" width="700" height="40" rx="6" fill="#d29922" opacity="0.05" stroke="#d29922" stroke-width="0.5" stroke-dasharray="4 3"/>
+    <text x="590" y="610" text-anchor="middle" fill="#d29922" font-size="11" font-weight="600">OTLP Trace Export (async)</text>
+    <text x="590" y="624" text-anchor="middle" fill="#8b949e" font-size="9">Phoenix :6006/v1/traces  ·  Grafana Tempo :4318/v1/traces</text>
+  </g>
+
+  <!-- Span visualization -->
+  <g class="step-box" style="animation-delay:2.7s">
+    <text x="90" y="665" fill="#8b949e" font-size="11" font-weight="600">Trace Timeline:</text>
+
+    <rect x="90" y="675" width="920" height="14" rx="3" fill="#1f6feb" opacity="0.3"/>
+    <text x="550" y="685" text-anchor="middle" fill="#58a6ff" font-size="8">HTTP POST /api/chat  (parent span)</text>
+
+    <rect x="180" y="695" width="730" height="14" rx="3" fill="#3fb950" opacity="0.3"/>
+    <text x="545" y="705" text-anchor="middle" fill="#3fb950" font-size="8">ChatClient.call  (child span)</text>
+
+    <rect x="270" y="715" width="50" height="12" rx="2" fill="#d29922" opacity="0.3"/>
+    <text x="295" y="724" text-anchor="middle" fill="#d29922" font-size="7">DB read</text>
+
+    <rect x="350" y="715" width="400" height="12" rx="2" fill="#a371f7" opacity="0.3"/>
+    <text x="550" y="724" text-anchor="middle" fill="#a371f7" font-size="7">Ollama chat llama3.2  (gen_ai span)</text>
+
+    <rect x="770" y="715" width="50" height="12" rx="2" fill="#d29922" opacity="0.3"/>
+    <text x="795" y="724" text-anchor="middle" fill="#d29922" font-size="7">DB write</text>
+  </g>
+</svg>
+</body>
+</html>

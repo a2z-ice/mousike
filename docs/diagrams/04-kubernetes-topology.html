@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mousike — Kubernetes Deployment Topology</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d1117; color: #c9d1d9; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 30px 20px; }
+  h1 { font-size: 24px; color: #f0f6fc; margin-bottom: 6px; }
+  .subtitle { color: #8b949e; font-size: 13px; margin-bottom: 30px; }
+  svg { max-width: 1100px; width: 100%; }
+
+  @keyframes pulse { 0%,100% { r: 5; opacity: 1; } 50% { r: 8; opacity: 0.5; } }
+  @keyframes dash { to { stroke-dashoffset: -16; } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .pod { animation: fadeIn 0.5s ease-out both; }
+  .health-dot { animation: pulse 2s ease-in-out infinite; fill: #3fb950; }
+  .flow { stroke-dasharray: 5 3; animation: dash 0.8s linear infinite; }
+  .flow-reverse { stroke-dasharray: 5 3; animation: dash 0.8s linear infinite reverse; }
+</style>
+</head>
+<body>
+<h1>Kubernetes Deployment Topology</h1>
+<p class="subtitle">Kind cluster "mousike-cluster" — namespace: rag — 7 pods + 1 job</p>
+
+<svg viewBox="0 0 1100 750" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#58a6ff"/></marker>
+    <marker id="ag" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#3fb950"/></marker>
+    <marker id="ap" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#a371f7"/></marker>
+    <marker id="ao" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#d29922"/></marker>
+  </defs>
+
+  <!-- Cluster boundary -->
+  <rect x="20" y="60" width="1060" height="640" rx="16" fill="none" stroke="#30363d" stroke-width="2" stroke-dasharray="8 4"/>
+  <text x="50" y="88" fill="#484f58" font-size="14" font-weight="700">Kind Cluster: mousike-cluster</text>
+  <text x="50" y="104" fill="#484f58" font-size="11">Namespace: rag</text>
+
+  <!-- Host machine / external -->
+  <rect x="30" y="10" width="200" height="40" rx="8" fill="#161b22" stroke="#d29922" stroke-width="1.5"/>
+  <text x="130" y="28" text-anchor="middle" fill="#d29922" font-size="12" font-weight="600">Host Machine</text>
+  <text x="130" y="42" text-anchor="middle" fill="#8b949e" font-size="10">Ollama :11434 (GPU)</text>
+  <circle cx="30" cy="10" r="4" class="health-dot"/>
+
+  <rect x="280" y="10" width="200" height="40" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="380" y="28" text-anchor="middle" fill="#58a6ff" font-size="12" font-weight="600">User Browser</text>
+  <text x="380" y="42" text-anchor="middle" fill="#8b949e" font-size="10">localhost:8080</text>
+
+  <!-- ═══════════════════ APPLICATION LAYER ═══════════════════ -->
+  <text x="550" y="140" text-anchor="middle" fill="#1f6feb" font-size="13" font-weight="700">APPLICATION LAYER</text>
+  <line x1="60" y1="148" x2="1040" y2="148" stroke="#1f6feb" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- Mousike Pod -->
+  <g class="pod" style="animation-delay:0.1s">
+    <rect x="60" y="160" width="300" height="130" rx="10" fill="#161b22" stroke="#1f6feb" stroke-width="1.5"/>
+    <circle cx="60" cy="160" r="4" class="health-dot"/>
+    <text x="210" y="185" text-anchor="middle" fill="#1f6feb" font-size="14" font-weight="700">mousike</text>
+    <text x="210" y="200" text-anchor="middle" fill="#8b949e" font-size="10">Deployment · 1 replica · 512Mi-1Gi</text>
+
+    <rect x="80" y="210" width="85" height="30" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="0.5"/>
+    <text x="122" y="228" text-anchor="middle" fill="#c9d1d9" font-size="9">Chat</text>
+    <rect x="175" y="210" width="85" height="30" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="0.5"/>
+    <text x="217" y="228" text-anchor="middle" fill="#c9d1d9" font-size="9">RAG</text>
+    <rect x="175" y="245" width="85" height="30" rx="4" fill="#0d1117" stroke="#a371f7" stroke-width="0.5"/>
+    <text x="217" y="263" text-anchor="middle" fill="#a371f7" font-size="9">MCP Client</text>
+    <rect x="80" y="245" width="85" height="30" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="0.5"/>
+    <text x="122" y="263" text-anchor="middle" fill="#c9d1d9" font-size="9">Search</text>
+    <rect x="270" y="210" width="75" height="65" rx="4" fill="#0d1117" stroke="#d29922" stroke-width="0.5"/>
+    <text x="307" y="235" text-anchor="middle" fill="#d29922" font-size="8">OTel</text>
+    <text x="307" y="248" text-anchor="middle" fill="#8b949e" font-size="7">Prometheus</text>
+    <text x="307" y="261" text-anchor="middle" fill="#8b949e" font-size="7">Traces</text>
+  </g>
+  <!-- Service -->
+  <rect x="80" y="295" width="260" height="22" rx="4" fill="#1f6feb" opacity="0.15" stroke="#1f6feb" stroke-width="0.5"/>
+  <text x="210" y="310" text-anchor="middle" fill="#58a6ff" font-size="10">mousike-service  NodePort 30080 → 8080</text>
+
+  <!-- Document Service Pod -->
+  <g class="pod" style="animation-delay:0.2s">
+    <rect x="420" y="160" width="280" height="130" rx="10" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
+    <circle cx="420" cy="160" r="4" class="health-dot"/>
+    <text x="560" y="185" text-anchor="middle" fill="#3fb950" font-size="14" font-weight="700">document-service</text>
+    <text x="560" y="200" text-anchor="middle" fill="#8b949e" font-size="10">Deployment · 1 replica · 512Mi-1Gi</text>
+
+    <rect x="440" y="210" width="100" height="30" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="0.5"/>
+    <text x="490" y="228" text-anchor="middle" fill="#c9d1d9" font-size="9">Ingestion</text>
+    <rect x="550" y="210" width="100" height="30" rx="4" fill="#0d1117" stroke="#a371f7" stroke-width="0.5"/>
+    <text x="600" y="228" text-anchor="middle" fill="#a371f7" font-size="9">MCP Server</text>
+    <rect x="660" y="210" width="25" height="30" rx="4" fill="#0d1117" stroke="#d29922" stroke-width="0.5"/>
+    <text x="672" y="228" text-anchor="middle" fill="#d29922" font-size="7">OT</text>
+
+    <rect x="440" y="250" width="210" height="25" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="0.5"/>
+    <text x="545" y="266" text-anchor="middle" fill="#8b949e" font-size="9">Tika → TokenSplitter → Embed → PGVector</text>
+  </g>
+  <rect x="440" y="295" width="240" height="22" rx="4" fill="#3fb950" opacity="0.15" stroke="#3fb950" stroke-width="0.5"/>
+  <text x="560" y="310" text-anchor="middle" fill="#3fb950" font-size="10">document-service  NodePort 30090 → 8090</text>
+
+  <!-- Ingester Job -->
+  <g class="pod" style="animation-delay:0.25s">
+    <rect x="760" y="160" width="280" height="80" rx="10" fill="#161b22" stroke="#d29922" stroke-width="1" stroke-dasharray="4 2"/>
+    <text x="900" y="185" text-anchor="middle" fill="#d29922" font-size="13" font-weight="600">document-ingester</text>
+    <text x="900" y="200" text-anchor="middle" fill="#8b949e" font-size="10">Job · backoffLimit=3 · profile=ingestion</text>
+    <text x="900" y="218" text-anchor="middle" fill="#8b949e" font-size="9">Runs once to bulk-ingest PDFs</text>
+    <rect x="760" y="248" width="280" height="18" rx="3" fill="#3fb950" opacity="0.1"/>
+    <text x="900" y="260" text-anchor="middle" fill="#3fb950" font-size="9">Status: Completed ✓</text>
+  </g>
+
+  <!-- ═══════════════════ INFRASTRUCTURE LAYER ═══════════════════ -->
+  <text x="550" y="350" text-anchor="middle" fill="#d29922" font-size="13" font-weight="700">INFRASTRUCTURE LAYER</text>
+  <line x1="60" y1="358" x2="1040" y2="358" stroke="#d29922" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- PostgreSQL StatefulSet -->
+  <g class="pod" style="animation-delay:0.3s">
+    <rect x="60" y="375" width="240" height="100" rx="10" fill="#161b22" stroke="#d29922" stroke-width="1.5"/>
+    <circle cx="60" cy="375" r="4" class="health-dot"/>
+    <text x="180" y="398" text-anchor="middle" fill="#d29922" font-size="13" font-weight="700">PostgreSQL + PGVector</text>
+    <text x="180" y="413" text-anchor="middle" fill="#8b949e" font-size="10">StatefulSet · ankane/pgvector</text>
+    <text x="180" y="430" text-anchor="middle" fill="#8b949e" font-size="9">PVC: 5Gi · HNSW · 768-dim</text>
+    <text x="180" y="445" text-anchor="middle" fill="#8b949e" font-size="9">vector_store + ai_chat_memory</text>
+    <rect x="80" y="455" width="200" height="14" rx="3" fill="#d29922" opacity="0.1"/>
+    <text x="180" y="465" text-anchor="middle" fill="#d29922" font-size="8">postgres-service (headless) :5432</text>
+  </g>
+
+  <!-- Redis -->
+  <g class="pod" style="animation-delay:0.35s">
+    <rect x="340" y="375" width="180" height="80" rx="10" fill="#161b22" stroke="#f85149" stroke-width="1.5"/>
+    <circle cx="340" cy="375" r="4" class="health-dot"/>
+    <text x="430" y="398" text-anchor="middle" fill="#f85149" font-size="13" font-weight="700">Redis</text>
+    <text x="430" y="413" text-anchor="middle" fill="#8b949e" font-size="10">Deployment · redis:7-alpine</text>
+    <text x="430" y="430" text-anchor="middle" fill="#8b949e" font-size="9">128Mi-256Mi · save 60 1</text>
+    <rect x="355" y="440" width="150" height="14" rx="3" fill="#f85149" opacity="0.1"/>
+    <text x="430" y="450" text-anchor="middle" fill="#f85149" font-size="8">redis-service :6379</text>
+  </g>
+
+  <!-- Docling -->
+  <g class="pod" style="animation-delay:0.4s">
+    <rect x="560" y="375" width="220" height="100" rx="10" fill="#161b22" stroke="#a371f7" stroke-width="1.5"/>
+    <circle cx="560" cy="375" r="4" class="health-dot"/>
+    <text x="670" y="398" text-anchor="middle" fill="#a371f7" font-size="13" font-weight="700">Docling</text>
+    <text x="670" y="413" text-anchor="middle" fill="#8b949e" font-size="10">docling-serve · 2 workers</text>
+    <text x="670" y="430" text-anchor="middle" fill="#8b949e" font-size="9">2Gi-4Gi · ML model cache</text>
+    <text x="670" y="447" text-anchor="middle" fill="#d29922" font-size="9">Slow start: 2-5 min</text>
+    <rect x="575" y="458" width="190" height="14" rx="3" fill="#a371f7" opacity="0.1"/>
+    <text x="670" y="468" text-anchor="middle" fill="#a371f7" font-size="8">docling-service :5001</text>
+  </g>
+
+  <!-- ═══════════════════ OBSERVABILITY LAYER ═══════════════════ -->
+  <text x="550" y="520" text-anchor="middle" fill="#58a6ff" font-size="13" font-weight="700">OBSERVABILITY LAYER</text>
+  <line x1="60" y1="528" x2="1040" y2="528" stroke="#58a6ff" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- Phoenix -->
+  <g class="pod" style="animation-delay:0.5s">
+    <rect x="60" y="545" width="300" height="90" rx="10" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
+    <circle cx="60" cy="545" r="4" class="health-dot"/>
+    <text x="210" y="568" text-anchor="middle" fill="#58a6ff" font-size="13" font-weight="700">Phoenix (Arize)</text>
+    <text x="210" y="583" text-anchor="middle" fill="#8b949e" font-size="10">LLM Trace Visualization</text>
+    <text x="210" y="600" text-anchor="middle" fill="#8b949e" font-size="9">UI :6006 · OTLP gRPC :4317</text>
+    <text x="210" y="617" text-anchor="middle" fill="#8b949e" font-size="9">OTLP HTTP :6006/v1/traces</text>
+    <rect x="80" y="620" width="260" height="14" rx="3" fill="#58a6ff" opacity="0.1"/>
+    <text x="210" y="630" text-anchor="middle" fill="#58a6ff" font-size="8">phoenix-service  NodePort 30600 → 6006</text>
+  </g>
+
+  <!-- Grafana LGTM -->
+  <g class="pod" style="animation-delay:0.55s">
+    <rect x="420" y="545" width="340" height="120" rx="10" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
+    <circle cx="420" cy="545" r="4" class="health-dot"/>
+    <text x="590" y="568" text-anchor="middle" fill="#3fb950" font-size="13" font-weight="700">Grafana LGTM Stack</text>
+    <text x="590" y="583" text-anchor="middle" fill="#8b949e" font-size="10">Metrics · Logs · Traces · Dashboards</text>
+
+    <rect x="440" y="595" width="70" height="24" rx="4" fill="#0d1117" stroke="#d29922" stroke-width="0.5"/>
+    <text x="475" y="611" text-anchor="middle" fill="#d29922" font-size="8">Prometheus</text>
+    <rect x="520" y="595" width="55" height="24" rx="4" fill="#0d1117" stroke="#58a6ff" stroke-width="0.5"/>
+    <text x="547" y="611" text-anchor="middle" fill="#58a6ff" font-size="8">Tempo</text>
+    <rect x="585" y="595" width="45" height="24" rx="4" fill="#0d1117" stroke="#3fb950" stroke-width="0.5"/>
+    <text x="607" y="611" text-anchor="middle" fill="#3fb950" font-size="8">Loki</text>
+    <rect x="640" y="595" width="60" height="24" rx="4" fill="#0d1117" stroke="#a371f7" stroke-width="0.5"/>
+    <text x="670" y="611" text-anchor="middle" fill="#a371f7" font-size="8">Pyroscope</text>
+
+    <rect x="440" y="630" width="300" height="28" rx="4" fill="#3fb950" opacity="0.1"/>
+    <text x="590" y="643" text-anchor="middle" fill="#3fb950" font-size="8">grafana-lgtm-service</text>
+    <text x="590" y="654" text-anchor="middle" fill="#8b949e" font-size="7">UI :3000 (30300) · OTLP HTTP :4318 (30418) · gRPC :4317</text>
+  </g>
+
+  <!-- Connection arrows -->
+  <!-- Browser → mousike -->
+  <line x1="380" y1="50" x2="210" y2="160" stroke="#58a6ff" stroke-width="1" marker-end="url(#ar)" class="flow"/>
+  <!-- Host Ollama → mousike -->
+  <line x1="130" y1="50" x2="150" y2="160" stroke="#a371f7" stroke-width="1" marker-end="url(#ap)" class="flow"/>
+  <!-- Host Ollama → document-service -->
+  <line x1="200" y1="30" x2="500" y2="160" stroke="#a371f7" stroke-width="1" marker-end="url(#ap)" class="flow" opacity="0.5"/>
+  <!-- mousike → document-service (MCP) -->
+  <line x1="340" y1="255" x2="420" y2="255" stroke="#a371f7" stroke-width="1.5" marker-end="url(#ap)" class="flow"/>
+  <text x="380" y="248" text-anchor="middle" fill="#a371f7" font-size="8">MCP/SSE</text>
+  <!-- mousike → postgres -->
+  <line x1="140" y1="317" x2="140" y2="375" stroke="#d29922" stroke-width="1" marker-end="url(#ao)" class="flow"/>
+  <!-- document-service → postgres -->
+  <line x1="500" y1="317" x2="250" y2="375" stroke="#d29922" stroke-width="1" marker-end="url(#ao)" class="flow" opacity="0.5"/>
+  <!-- mousike → redis -->
+  <line x1="270" y1="317" x2="400" y2="375" stroke="#f85149" stroke-width="1" marker-end="url(#ar)" class="flow" opacity="0.5"/>
+  <!-- document-service → docling -->
+  <line x1="610" y1="317" x2="640" y2="375" stroke="#a371f7" stroke-width="1" marker-end="url(#ap)" class="flow"/>
+  <!-- mousike → phoenix (traces) -->
+  <line x1="310" y1="280" x2="210" y2="545" stroke="#58a6ff" stroke-width="1" marker-end="url(#ar)" class="flow" opacity="0.4"/>
+  <!-- mousike → grafana (metrics) -->
+  <line x1="330" y1="280" x2="500" y2="545" stroke="#3fb950" stroke-width="1" marker-end="url(#ag)" class="flow" opacity="0.4"/>
+
+  <!-- Port mapping legend -->
+  <g transform="translate(820, 375)">
+    <rect x="0" y="0" width="220" height="130" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+    <text x="110" y="20" text-anchor="middle" fill="#c9d1d9" font-size="11" font-weight="700">Port Mapping</text>
+    <text x="15" y="40" fill="#8b949e" font-size="9">localhost:8080  → mousike :30080</text>
+    <text x="15" y="55" fill="#8b949e" font-size="9">localhost:8090  → doc-svc :30090</text>
+    <text x="15" y="70" fill="#8b949e" font-size="9">localhost:6006  → phoenix :30600</text>
+    <text x="15" y="85" fill="#8b949e" font-size="9">localhost:3000  → grafana :30300</text>
+    <text x="15" y="100" fill="#8b949e" font-size="9">localhost:4318  → otlp    :30418</text>
+    <text x="15" y="120" fill="#484f58" font-size="8">host.docker.internal:11434 → Ollama</text>
+  </g>
+</svg>
+</body>
+</html>
