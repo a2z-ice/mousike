@@ -17,6 +17,7 @@
 9. [Test 8: Composer Data Extraction](#9-test-8-composer-data-extraction)
 10. [Test 9: MCP Integration (Agentic Tools)](#10-test-9-mcp-integration-agentic-tools)
 11. [Test 10: Observability & Metrics](#11-test-10-observability--metrics)
+    - [Test 10.10: Phoenix Trace Deep Dive](#test-1010-phoenix-trace-deep-dive--understanding-the-llm-call-stack)
 12. [Test 11: UI Comprehensive Walkthrough](#12-test-11-ui-comprehensive-walkthrough)
 13. [Test 12: End-to-End Flow Validation](#13-test-12-end-to-end-flow-validation)
 14. [Test Result Template](#14-test-result-template)
@@ -720,7 +721,180 @@ Open in browser: http://localhost:3000
 
 ![Grafana Tempo Explore](images/08-grafana-tempo-explore.png)
 
-**Pass criteria**: ✅ Tempo search interface loads (traces may or may not appear depending on OTLP export)
+**Pass criteria**: ✅ Tempo search interface loads and shows mousike traces
+
+### Test 10.10: Phoenix Trace Deep Dive — Understanding the LLM Call Stack
+
+This section walks you through the complete trace visualization in Phoenix, showing how a user message flows through the entire system — from HTTP request to LLM response.
+
+#### Step 1: Open Phoenix and verify traces are present
+
+Navigate to http://localhost:6006
+
+![Phoenix Projects Overview](images/10-phoenix-projects-overview.png)
+
+**Verify**:
+- [ ] Phoenix shows the **"default"** project card
+- [ ] **Total Traces** count is > 0 (should be dozens after running the e2e tests)
+- [ ] **Latency P50** is displayed (typically 3-10ms for simple spans)
+
+#### Step 2: Open the traces list
+
+Click on the **"default"** project card to view all traces.
+
+![Phoenix Traces List](images/10-phoenix-traces-list.png)
+
+**What you see**:
+- A table of all root spans (top-level operations)
+- Each row shows: **status**, **kind**, **name**, **input**, **output**, **annotations**
+- Key trace names to look for:
+  - `http post /api/chat` — Chat message traces
+  - `http post /api/rag/query` — RAG query traces (most interesting — has full pipeline)
+  - `http get /api/search` — Vector search traces
+  - `http post /api/classify` — Classification traces
+  - `http post /api/extract` — Extraction traces
+  - `http get /actuator/health/**` — Health check traces (can be filtered out)
+
+**Verify**:
+- [ ] Traces list loads with multiple entries
+- [ ] You can see `http post /api/chat` and `http post /api/rag/query` traces
+- [ ] Stream toggle is available in top-right corner
+
+#### Step 3: Inspect a Chat trace — message flow through LLM
+
+Click on an `http post /api/chat` trace to open the **Trace Details** panel.
+
+![Phoenix Chat Trace Detail](images/10-phoenix-trace-chat-detail.png)
+
+**Understanding the Chat call stack**:
+
+```
+http post /api/chat          ← HTTP request received (root span, ~5-8s)
+  └─ chat llama3.2           ← Spring AI calls Ollama LLM (child span)
+       └─ http post          ← Actual HTTP call to Ollama API (grandchild span)
+```
+
+**What each span means**:
+1. **`http post /api/chat`** (root) — The incoming HTTP POST request from the user/browser. Shows:
+   - `uri: "/api/chat"`
+   - `method: "POST"`
+   - `status: "200"`
+   - `outcome: "SUCCESS"`
+   - Total latency (e.g., 5.8s — includes LLM processing time)
+
+2. **`chat llama3.2`** — Spring AI's `ChatClient` calling the Ollama chat model. This span is created by the Spring AI observation framework. Shows the model name and operation type.
+
+3. **`http post`** — The actual HTTP POST to the Ollama API (`http://host.docker.internal:11434/api/chat`). This is the raw network call.
+
+**Verify**:
+- [ ] Three-level trace tree is visible (http → chat → http)
+- [ ] Root span shows URI `/api/chat` and status `200`
+- [ ] Click on `chat llama3.2` to see LLM-specific attributes
+- [ ] Total latency matches approximate response time
+
+#### Step 4: Inspect a RAG trace — the full retrieval-augmented generation pipeline
+
+This is the most comprehensive trace. Click on an `http post /api/rag/query` trace.
+
+![Phoenix RAG Trace Detail](images/10-phoenix-trace-rag-detail.png)
+
+**Understanding the RAG call stack**:
+
+```
+http post /api/rag/query     ← HTTP request received (root span, ~3-7s)
+  ├─ pg_vector query          ← 1st vector similarity search
+  │    └─ embedding           ← Embed the search query
+  │         └─ http post      ← HTTP call to Ollama embedding API
+  ├─ pg_vector query          ← 2nd vector similarity search (if multi-query)
+  │    └─ embedding           ← Embed another query variant
+  │         └─ http post      ← HTTP call to Ollama embedding API
+  └─ chat llama3.2            ← LLM generates answer from retrieved context
+       └─ http post           ← HTTP call to Ollama chat API
+```
+
+**What each span means**:
+1. **`http post /api/rag/query`** (root) — The RAG query request
+2. **`pg_vector query`** — PGVector similarity search. Spring AI queries the PostgreSQL vector store using cosine distance to find relevant document chunks
+3. **`embedding`** — The search query is converted to a 768-dimensional vector using `nomic-embed-text` model via Ollama
+4. **`http post`** (under embedding) — Raw HTTP call to Ollama's `/api/embed` endpoint
+5. **`chat llama3.2`** — After retrieving context, the LLM generates a response using the retrieved chunks as context
+6. **`http post`** (under chat) — Raw HTTP call to Ollama's `/api/chat` endpoint
+
+**The data flow**:
+```
+User Question
+    ↓
+[Embedding Model] converts question to vector
+    ↓
+[PGVector] finds similar document chunks (cosine similarity > 0.65)
+    ↓
+[Retrieved chunks] are prepended to the LLM prompt as context
+    ↓
+[Chat Model] generates answer using context + question
+    ↓
+Response returned to user
+```
+
+**Verify**:
+- [ ] Trace tree shows 5+ spans (pg_vector, embedding, chat, http calls)
+- [ ] `pg_vector query` spans appear before `chat llama3.2` (retrieval happens first)
+- [ ] `embedding` spans are children of `pg_vector query` (query must be embedded before search)
+- [ ] Root span total latency = embedding time + vector search time + LLM generation time
+
+#### Step 5: Examine span attributes
+
+Click on any span in the trace tree to see its **All Attributes** section.
+
+**For `http post /api/chat` span**:
+```json
+{
+  "uri": "/api/chat",
+  "exception": "none",
+  "method": "POST",
+  "status": "200",
+  "outcome": "SUCCESS",
+  "http": {
+    "url": "/api/chat"
+  }
+}
+```
+
+**For `chat llama3.2` span** (click the Attributes tab):
+- `gen_ai.operation.name`: "chat"
+- `gen_ai.system`: "ollama"
+- `gen_ai.request.model`: "llama3.2"
+- `gen_ai.response.model`: "llama3.2"
+
+**For `embedding` span**:
+- `gen_ai.operation.name`: "embedding"
+- `gen_ai.system`: "ollama"
+- `gen_ai.request.model`: "nomic-embed-text"
+
+**For `pg_vector query` span**:
+- `db.system`: "pg_vector"
+- `db.operation`: "query"
+
+#### Step 6: Use Phoenix filters and search
+
+On the traces list page, you can filter spans:
+
+1. **Filter by span kind**: Type in the filter bar: `span_kind == 'LLM'` to see only LLM calls
+2. **Filter by name**: Use `name == 'chat llama3.2'` to see only chat model calls
+3. **Switch to Traces tab**: Click the "Traces" tab (next to "Spans") to see grouped trace views instead of individual spans
+
+#### Step 7: Verify trace completeness
+
+After running all the e2e tests or manual API calls, verify the following traces exist:
+
+| API Endpoint | Expected Spans | Key Child Spans |
+|---|---|---|
+| `POST /api/chat` | 3 spans | `chat llama3.2` → `http post` |
+| `POST /api/rag/query` | 5-7 spans | `pg_vector query` → `embedding`, `chat llama3.2` |
+| `GET /api/search` | 3-5 spans | `pg_vector query` → `embedding` |
+| `POST /api/classify` | 3 spans | `chat llama3.2` → `http post` |
+| `POST /api/extract` | 3 spans | `chat llama3.2` → `http post` |
+
+**Pass criteria**: ✅ All trace types are present in Phoenix with correct parent-child span relationships. RAG traces show the full pipeline: embedding → vector search → LLM generation.
 
 ---
 

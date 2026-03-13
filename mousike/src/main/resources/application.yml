@@ -91,13 +91,11 @@ management:
   tracing:
     sampling:
       probability: 1.0
-  otlp:
+  opentelemetry:
     tracing:
-      endpoint: ${GRAFANA_OTLP_HTTP_URL:http://localhost:4318}/v1/traces
-    logging:
-      endpoint: ${GRAFANA_OTLP_HTTP_URL:http://localhost:4318}/v1/logs
-    metrics:
-      endpoint: ${GRAFANA_OTLP_HTTP_URL:http://localhost:4318}/v1/metrics
+      export:
+        otlp:
+          endpoint: ${GRAFANA_OTLP_HTTP_URL:http://localhost:4318}/v1/traces
 
 logging:
   pattern:

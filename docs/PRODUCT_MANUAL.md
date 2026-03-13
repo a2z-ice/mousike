@@ -723,13 +723,43 @@ After the LLM generates a response, it is validated:
 
 **URL**: http://localhost:6006
 
-![Phoenix UI](images/01-phoenix-ui.png)
+![Phoenix Projects Overview](images/10-phoenix-projects-overview.png)
 
 Phoenix provides AI-specific observability:
-- **Trace visualization**: See every LLM call with prompt/completion text
-- **Latency tracking**: P50/P95/P99 latency for LLM calls
-- **Token usage**: Input/output token counts
+- **Trace visualization**: See every LLM call with full call stack
+- **Latency tracking**: P50/P99 latency for LLM calls and overall traces
+- **Span hierarchy**: Parent-child span relationships showing the complete message flow
 - **Projects**: Traces organized into the "default" project
+
+#### Traces List
+
+Click the "default" project to see all traces:
+
+![Phoenix Traces List](images/10-phoenix-traces-list.png)
+
+#### Chat Trace — LLM Call Stack
+
+Click on an `http post /api/chat` trace to see the full call stack:
+
+![Phoenix Chat Trace](images/10-phoenix-trace-chat-detail.png)
+
+The chat trace shows three levels:
+1. **`http post /api/chat`** — incoming HTTP request (root span)
+2. **`chat llama3.2`** — Spring AI calling the Ollama LLM
+3. **`http post`** — raw HTTP call to Ollama API
+
+#### RAG Trace — Full Retrieval Pipeline
+
+The RAG trace is the most comprehensive, showing the entire retrieval-augmented generation pipeline:
+
+![Phoenix RAG Trace](images/10-phoenix-trace-rag-detail.png)
+
+The RAG trace shows:
+1. **`http post /api/rag/query`** — incoming request (root)
+2. **`pg_vector query`** → **`embedding`** → **`http post`** — vector similarity search (query embedding + PGVector lookup)
+3. **`chat llama3.2`** → **`http post`** — LLM generates answer from retrieved context
+
+This demonstrates the complete flow: **question → embed → search → retrieve → generate → respond**.
 
 ### Grafana — Full Observability Stack
 
@@ -798,7 +828,7 @@ Returns component-level health including database, disk space, and readiness/liv
 | `SPRING_AI_OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API endpoint |
 | `DOCUMENT_SERVICE_URL` | `http://localhost:8090` | Document service base URL |
 | `GRAFANA_OTLP_HTTP_URL` | `http://localhost:4318` | Grafana OTLP HTTP endpoint |
-| `PHOENIX_OTLP_GRPC_URL` | `http://localhost:4317` | Phoenix OTLP gRPC endpoint |
+| `PHOENIX_OTLP_HTTP_URL` | `http://localhost:6006` | Phoenix OTLP HTTP endpoint |
 
 ### LLM Configuration
 

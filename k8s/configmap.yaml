@@ -10,6 +10,7 @@ data:
   POSTGRES_DB: "mousike"
   DOCLING_BASE_URL: "http://docling-service:5001"
   PHOENIX_OTLP_GRPC_URL: "http://phoenix-service:4317"
+  PHOENIX_OTLP_HTTP_URL: "http://phoenix-service:6006"
   GRAFANA_OTLP_HTTP_URL: "http://grafana-lgtm-service:4318"
   REDIS_HOST: "redis-service"
   REDIS_PORT: "6379"

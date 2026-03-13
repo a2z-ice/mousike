@@ -37,6 +37,7 @@ dependencies {
     implementation("com.vaadin:vaadin-spring-boot-starter:25.0.5")
 
     // Observability — OpenTelemetry
+    implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
     implementation("io.opentelemetry:opentelemetry-exporter-otlp")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
