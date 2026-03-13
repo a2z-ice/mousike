@@ -51,48 +51,9 @@ Mousike is a platform for music knowledge management and AI-assisted Q&A. It con
 
 ## 2. Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        User (Browser)                           │
-│                                                                 │
-│   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐     │
-│   │   Chat   │  │  Search  │  │ Composer  │  │ Monitor  │     │
-│   │   View   │  │   View   │  │   View    │  │   View   │     │
-│   └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘     │
-└────────┼──────────────┼─────────────┼─────────────┼────────────┘
-         │              │             │             │
-    ┌────▼──────────────▼─────────────▼─────────────▼────────────┐
-    │                    mousike-app (:8080)                      │
-    │                                                             │
-    │  ┌─────────┐ ┌──────────┐ ┌───────────┐ ┌──────────────┐  │
-    │  │ChatSvc  │ │SemanticSvc│ │Classify/  │ │ RAG Services │  │
-    │  │(Stream) │ │(VectorDB)│ │Extract    │ │Naive/Adv/Agnt│  │
-    │  └───┬─────┘ └────┬─────┘ └─────┬─────┘ └──────┬───────┘  │
-    │      │             │             │              │           │
-    │  ┌───▼─────────────▼─────────────▼──────────────▼────────┐ │
-    │  │              Spring AI ChatClient                     │ │
-    │  │    ┌─────────────┐  ┌────────────┐  ┌──────────────┐ │ │
-    │  │    │ Chat Memory │  │QuestionAnswer│ │  MCP Tool    │ │ │
-    │  │    │  Advisor    │  │  Advisor    │  │  Callbacks   │ │ │
-    │  │    └──────┬──────┘  └─────┬──────┘  └──────┬───────┘ │ │
-    │  └───────────┼───────────────┼─────────────────┼─────────┘ │
-    └──────────────┼───────────────┼─────────────────┼───────────┘
-                   │               │                 │
-         ┌─────────▼───┐  ┌───────▼──────┐  ┌───────▼───────────┐
-         │  Ollama LLM │  │  PGVector    │  │  document-service │
-         │  llama3.2   │  │  (Postgres)  │  │  MCP Server(:8091)│
-         │  nomic-embed│  │  768-dim     │  │  ┌─────────────┐  │
-         │  (:11434)   │  │  HNSW/Cosine │  │  │MusicKnowledge│ │
-         └─────────────┘  └──────────────┘  │  │   Tools     │  │
-                                             │  └──────┬──────┘  │
-                                             │         │         │
-                                             │  ┌──────▼──────┐  │
-                                             │  │Tika Reader  │  │
-                                             │  │TokenSplitter│  │
-                                             │  │PGVector     │  │
-                                             │  └─────────────┘  │
-                                             └───────────────────┘
-```
+![Architecture Overview](images/diagrams/01-architecture-overview.gif)
+
+*Animated architecture diagram showing data flow between all services. [Open interactive version](diagrams/01-architecture-overview.html)*
 
 ### Data Flow
 
@@ -626,6 +587,10 @@ Use consistent category tags to enable filtered searching:
 
 ## 7. RAG Modes Explained
 
+| Naive RAG Pipeline | Agentic RAG Pipeline |
+|:---:|:---:|
+| ![Naive RAG](images/diagrams/02-rag-pipeline-naive.gif) | ![Agentic RAG](images/diagrams/02-rag-pipeline-agentic.gif) |
+
 Mousike offers three RAG (Retrieval-Augmented Generation) strategies, each with different trade-offs:
 
 ### Naive RAG
@@ -718,6 +683,10 @@ After the LLM generates a response, it is validated:
 ---
 
 ## 9. Observability & Monitoring
+
+![Observability Data Flow](images/diagrams/05-observability-trace-flow.gif)
+
+*Dual OTLP export: traces flow to both Phoenix (LLM visualization) and Grafana Tempo (infrastructure traces)*
 
 ### Phoenix — LLM Trace Viewer
 

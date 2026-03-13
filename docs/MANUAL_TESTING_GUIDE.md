@@ -725,6 +725,8 @@ Open in browser: http://localhost:3000
 
 ### Test 10.10: Phoenix Trace Deep Dive — Understanding the LLM Call Stack
 
+![Observability & Trace Flow](images/diagrams/05-observability-trace-flow.gif)
+
 This section walks you through the complete trace visualization in Phoenix, showing how a user message flows through the entire system — from HTTP request to LLM response.
 
 #### Step 1: Open Phoenix and verify traces are present

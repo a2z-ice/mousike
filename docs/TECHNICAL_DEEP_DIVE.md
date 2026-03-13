@@ -48,7 +48,9 @@
 
 Mousike is a two-service microservice platform that demonstrates production-grade AI/LLM application patterns using Spring Boot 4 and Spring AI 2.0.
 
-> **Interactive diagram**: Open [`docs/diagrams/01-architecture-overview.html`](diagrams/01-architecture-overview.html) for the animated version.
+![Architecture Overview](images/diagrams/01-architecture-overview.gif)
+
+> **Interactive version**: Open [`docs/diagrams/01-architecture-overview.html`](diagrams/01-architecture-overview.html) in a browser for the full animated experience.
 
 ```mermaid
 graph TB
@@ -419,7 +421,11 @@ public class ChatController {
 
 The application implements three RAG modes, progressively increasing in capability:
 
-> **Interactive diagram**: Open [`docs/diagrams/02-rag-pipeline-flow.html`](diagrams/02-rag-pipeline-flow.html) for the animated version with tab switching between all 3 modes.
+| Naive RAG | Agentic RAG |
+|:---------:|:-----------:|
+| ![Naive RAG](images/diagrams/02-rag-pipeline-naive.gif) | ![Agentic RAG](images/diagrams/02-rag-pipeline-agentic.gif) |
+
+> **Interactive version**: Open [`docs/diagrams/02-rag-pipeline-flow.html`](diagrams/02-rag-pipeline-flow.html) for all 3 modes with tab switching.
 
 ```mermaid
 graph LR
@@ -710,7 +716,9 @@ public record RetrievalResult(
 
 MCP enables the mousike-app to discover and invoke tools exposed by the document-service at runtime. The LLM decides when and how to call these tools.
 
-> **Interactive diagram**: Open [`docs/diagrams/07-mcp-communication.html`](diagrams/07-mcp-communication.html) for the animated MCP sequence diagram.
+![MCP Communication](images/diagrams/07-mcp-communication.gif)
+
+> **Interactive version**: Open [`docs/diagrams/07-mcp-communication.html`](diagrams/07-mcp-communication.html) for the full animated sequence.
 
 ```mermaid
 sequenceDiagram
@@ -872,7 +880,9 @@ spring:
 
 ## 9. Document Ingestion Pipeline
 
-> **Interactive diagram**: Open [`docs/diagrams/06-document-ingestion-pipeline.html`](diagrams/06-document-ingestion-pipeline.html) for the animated pipeline with data transformation visualization.
+![Document Ingestion Pipeline](images/diagrams/06-document-ingestion.gif)
+
+> **Interactive version**: Open [`docs/diagrams/06-document-ingestion-pipeline.html`](diagrams/06-document-ingestion-pipeline.html) for the animated pipeline with data transformation.
 
 ```mermaid
 graph LR
@@ -1104,7 +1114,9 @@ Output: {"name": "Ludwig van Beethoven", "birthYear": 1770, "deathYear": 1827,
 
 ## 13. Observability — OpenTelemetry, Phoenix & Grafana
 
-> **Interactive diagram**: Open [`docs/diagrams/05-observability-trace-flow.html`](diagrams/05-observability-trace-flow.html) for the animated trace flow with span visualization.
+![Observability & Tracing](images/diagrams/05-observability-trace-flow.gif)
+
+> **Interactive version**: Open [`docs/diagrams/05-observability-trace-flow.html`](diagrams/05-observability-trace-flow.html) for the animated trace flow with span visualization.
 
 ```mermaid
 graph TB
@@ -1300,7 +1312,9 @@ public class ChatView extends VerticalLayout {
 
 ## 15. Kubernetes Deployment Architecture
 
-> **Interactive diagram**: Open [`docs/diagrams/04-kubernetes-topology.html`](diagrams/04-kubernetes-topology.html) for the animated cluster topology with health indicators.
+![Kubernetes Topology](images/diagrams/04-kubernetes-topology.gif)
+
+> **Interactive version**: Open [`docs/diagrams/04-kubernetes-topology.html`](diagrams/04-kubernetes-topology.html) for the animated cluster topology with health indicators.
 
 ```mermaid
 graph TB
@@ -1436,7 +1450,9 @@ kubectl apply -f k8s/mousike/
 
 ## 17. Data Flow Diagrams
 
-> **Interactive diagram**: Open [`docs/diagrams/03-request-lifecycle.html`](diagrams/03-request-lifecycle.html) for the animated sequence diagram with trace timeline visualization.
+![Request Lifecycle](images/diagrams/03-request-lifecycle.gif)
+
+> **Interactive version**: Open [`docs/diagrams/03-request-lifecycle.html`](diagrams/03-request-lifecycle.html) for the animated sequence with trace timeline.
 
 ```mermaid
 sequenceDiagram
@@ -2769,15 +2785,15 @@ The `docs/diagrams/` directory contains interactive, animated HTML diagrams that
 
 ### Diagram Gallery
 
-| # | Diagram | File | Description |
-|---|---------|------|-------------|
-| 01 | **Architecture Overview** | [`01-architecture-overview.html`](diagrams/01-architecture-overview.html) | Full system architecture with animated data flow particles between all services, color-coded by layer |
-| 02 | **RAG Pipeline Flow** | [`02-rag-pipeline-flow.html`](diagrams/02-rag-pipeline-flow.html) | Interactive tabs for all 3 RAG modes (Naive/Advanced/Agentic) with animated guardrail gates showing pass/reject |
-| 03 | **Request Lifecycle** | [`03-request-lifecycle.html`](diagrams/03-request-lifecycle.html) | Animated sequence diagram: chat message through Browser → Controller → Service → ChatClient → Ollama → DB, with trace timeline at the bottom |
-| 04 | **Kubernetes Topology** | [`04-kubernetes-topology.html`](diagrams/04-kubernetes-topology.html) | Complete K8s cluster layout with all 7 pods, services, port mappings, resource limits, and animated health indicators |
-| 05 | **Observability & Tracing** | [`05-observability-trace-flow.html`](diagrams/05-observability-trace-flow.html) | Dual OTLP export pipeline to Phoenix + Grafana, with animated span bar visualization showing a real RAG trace |
-| 06 | **Document Ingestion** | [`06-document-ingestion-pipeline.html`](diagrams/06-document-ingestion-pipeline.html) | Step-by-step pipeline with animated data particles: PDF → Tika → Metadata → Splitter → Embedding → PGVector, plus data transformation examples |
-| 07 | **MCP Communication** | [`07-mcp-communication.html`](diagrams/07-mcp-communication.html) | MCP client-server architecture with animated SSE data dots and full tool call sequence diagram |
+| # | Preview | Diagram | Description |
+|---|---------|---------|-------------|
+| 01 | ![](images/diagrams/01-architecture-overview.gif) | [Architecture Overview](diagrams/01-architecture-overview.html) | Full system architecture with animated data flow particles |
+| 02 | ![](images/diagrams/02-rag-pipeline-naive.gif) | [RAG Pipeline](diagrams/02-rag-pipeline-flow.html) | 3 RAG modes with animated guardrail gates |
+| 03 | ![](images/diagrams/03-request-lifecycle.gif) | [Request Lifecycle](diagrams/03-request-lifecycle.html) | Chat message sequence with trace timeline |
+| 04 | ![](images/diagrams/04-kubernetes-topology.gif) | [K8s Topology](diagrams/04-kubernetes-topology.html) | Cluster layout with health indicators |
+| 05 | ![](images/diagrams/05-observability-trace-flow.gif) | [Observability](diagrams/05-observability-trace-flow.html) | Dual OTLP export + span visualization |
+| 06 | ![](images/diagrams/06-document-ingestion.gif) | [Ingestion Pipeline](diagrams/06-document-ingestion-pipeline.html) | PDF → Tika → Chunk → Embed → PGVector |
+| 07 | ![](images/diagrams/07-mcp-communication.gif) | [MCP Communication](diagrams/07-mcp-communication.html) | SSE protocol + tool call sequence |
 
 ### How to View
 
