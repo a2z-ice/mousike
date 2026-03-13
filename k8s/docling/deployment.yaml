@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docling
+  namespace: rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: docling
+  template:
+    metadata:
+      labels:
+        app: docling
+    spec:
+      containers:
+        - name: docling
+          image: quay.io/docling-project/docling-serve:latest
+          ports:
+            - containerPort: 5001
+          env:
+            - name: DOCLING_SERVE_WORKERS
+              value: "2"
+          volumeMounts:
+            - name: docling-cache
+              mountPath: /root/.cache/docling
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 20
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1000m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+      volumes:
+        - name: docling-cache
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docling-service
+  namespace: rag
+spec:
+  selector:
+    app: docling
+  ports:
+    - port: 5001
+      targetPort: 5001

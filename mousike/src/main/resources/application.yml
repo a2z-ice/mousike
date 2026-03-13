@@ -1,0 +1,107 @@
+spring:
+  application:
+    name: mousike
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/mousike}
+    username: ${POSTGRES_USER:mousike}
+    password: ${POSTGRES_PASSWORD:mousike-secret}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 10000
+      maximum-pool-size: 10
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate.format_sql: true
+
+  ai:
+    ollama:
+      base-url: ${SPRING_AI_OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        model: llama3.2
+        options:
+          temperature: 0.7
+          top-p: 0.9
+          num-ctx: 4096
+      embedding:
+        model: nomic-embed-text
+
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 768
+        initialize-schema: true
+        schema-name: public
+        table-name: vector_store
+        max-document-batch-size: 10000
+      observations:
+        enabled: true
+
+    mcp:
+      client:
+        enabled: true
+        name: mousike-mcp-client
+        version: "1.0.0"
+        request-timeout: 30s
+        type: SYNC
+        sse:
+          connections:
+            document-service:
+              url: ${DOCUMENT_SERVICE_URL:http://localhost:8090}/mcp/sse
+
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: always
+      observations:
+        enabled: true
+        include-prompt: true
+        include-completion: true
+    embedding:
+      observations:
+        enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics,env
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+      show-components: always
+  health:
+    db:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${GRAFANA_OTLP_HTTP_URL:http://localhost:4318}/v1/traces
+    logging:
+      endpoint: ${GRAFANA_OTLP_HTTP_URL:http://localhost:4318}/v1/logs
+    metrics:
+      endpoint: ${GRAFANA_OTLP_HTTP_URL:http://localhost:4318}/v1/metrics
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - traceId=%X{traceId} spanId=%X{spanId} - %msg%n"
+  level:
+    org.springframework.ai: DEBUG
+    com.example.mousike: DEBUG

@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: document-service
+  namespace: rag
+  labels:
+    app: document-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: document-service
+  template:
+    metadata:
+      labels:
+        app: document-service
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z postgres-service 5432; do sleep 2; done']
+        - name: wait-for-docling
+          image: busybox:1.36
+          command: ['sh', '-c', 'until wget -qO- http://docling-service:5001/health; do echo waiting for docling; sleep 5; done']
+      containers:
+        - name: document-service
+          image: document-service:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8090
+          envFrom:
+            - configMapRef:
+                name: rag-config
+            - secretRef:
+                name: rag-secrets
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres-service:5432/mousike"
+            - name: SPRING_AI_OLLAMA_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: rag-config
+                  key: OLLAMA_BASE_URL
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8090
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: document-service
+  namespace: rag
+spec:
+  type: NodePort
+  selector:
+    app: document-service
+  ports:
+    - port: 8090
+      targetPort: 8090
+      nodePort: 30090

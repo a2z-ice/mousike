@@ -1,0 +1,4 @@
+spring:
+  ai:
+    ollama:
+      base-url: ${SPRING_AI_OLLAMA_BASE_URL:http://host.docker.internal:11434}

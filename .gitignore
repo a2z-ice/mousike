@@ -1,0 +1,42 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+
+# Spring Boot
+*.log
+*.pid
+
+# Vaadin
+**/frontend/generated/
+mousike/node_modules/
+mousike/package-lock.json
+mousike/pnpm-lock.yaml
+mousike/tsconfig.json
+mousike/types.d.ts
+mousike/vite.generated.ts
+mousike/vite.config.ts
+mousike/webpack.config.js
+mousike/webpack.generated.js
+
+# Secrets (never commit)
+*.env
+credentials.json

@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: document-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/mousike}
+    username: ${POSTGRES_USER:mousike}
+    password: ${POSTGRES_PASSWORD:mousike-secret}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  ai:
+    ollama:
+      base-url: ${SPRING_AI_OLLAMA_BASE_URL:http://localhost:11434}
+      embedding:
+        model: nomic-embed-text
+
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 768
+        initialize-schema: true
+        table-name: vector_store
+
+    docling:
+      base-url: ${DOCLING_BASE_URL:http://localhost:5001}
+
+    mcp:
+      server:
+        enabled: true
+        name: document-service
+        version: "1.0.0"
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+server:
+  port: 8090
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${GRAFANA_OTLP_HTTP_URL:http://localhost:4318}/v1/traces
