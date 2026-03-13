@@ -147,10 +147,17 @@ test.describe.serial('10 - Phoenix Trace Screenshots', () => {
       await firstRow.click();
       await page.waitForTimeout(3000);
 
+      // Dismiss any modal overlay that may appear
+      const overlay = page.locator('[data-testid="modal-overlay"]');
+      if (await overlay.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(1000);
+      }
+
       // Try to find and click on a span labeled 'chat' or 'llm'
       const chatSpan = page.locator('text=/chat llama/i').first();
       if (await chatSpan.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await chatSpan.click();
+        await chatSpan.click({ force: true });
         await page.waitForTimeout(2000);
       }
     }
