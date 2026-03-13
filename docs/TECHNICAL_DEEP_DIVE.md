@@ -24,6 +24,22 @@
 16. [REST API Reference](#16-rest-api-reference)
 17. [Data Flow Diagrams](#17-data-flow-diagrams)
 18. [Testing Strategy](#18-testing-strategy)
+19. [Troubleshooting Guide — End-to-End Debugging](#19-troubleshooting-guide--end-to-end-debugging)
+    - [19.1 Application Health & Startup Failures](#191-application-health--startup-failures)
+    - [19.2 Database & PGVector](#192-database--pgvector-troubleshooting)
+    - [19.3 Chat System](#193-chat-system-troubleshooting)
+    - [19.4 RAG Pipeline](#194-rag-pipeline-troubleshooting)
+    - [19.5 Document Ingestion](#195-document-ingestion-troubleshooting)
+    - [19.6 Docling Service](#196-docling-service-troubleshooting)
+    - [19.7 MCP (Model Context Protocol)](#197-mcp-model-context-protocol-troubleshooting)
+    - [19.8 Tracing & Observability](#198-tracing--observability-troubleshooting)
+    - [19.9 Prometheus Metrics](#199-prometheus-metrics-troubleshooting)
+    - [19.10 Semantic Search](#1910-semantic-search-troubleshooting)
+    - [19.11 Kubernetes Cluster](#1911-kubernetes-cluster-troubleshooting)
+    - [19.12 E2E Tests](#1912-e2e-test-troubleshooting)
+    - [19.13 Build & Dependencies](#1913-build--dependency-troubleshooting)
+    - [19.14 Troubleshooting Decision Tree](#1914-troubleshooting-decision-tree)
+    - [19.15 Quick Health Check Script](#1915-quick-health-check-script)
 
 ---
 
@@ -1479,4 +1495,1105 @@ management:
       export:
         otlp:
           endpoint: ${GRAFANA_OTLP_HTTP_URL:http://localhost:4318}/v1/traces
+```
+
+---
+
+## 19. Troubleshooting Guide — End-to-End Debugging
+
+This section covers real-world troubleshooting scenarios for every layer of the Mousike stack, with step-by-step diagnostic commands, expected outputs, and fixes.
+
+---
+
+### 19.1 Application Health & Startup Failures
+
+#### Symptom: Pod stuck in CrashLoopBackOff or app won't start
+
+**Step 1 — Check pod status and events:**
+```bash
+kubectl get pods -n rag
+kubectl describe pod -l app=mousike -n rag | tail -40
+```
+
+Expected healthy output:
+```
+NAME                       READY   STATUS    RESTARTS   AGE
+mousike-7f8d6b4c5-x2k9q   1/1     Running   0          5m
+```
+
+If `STATUS` shows `CrashLoopBackOff` or `Init:Error`:
+```bash
+# Check init container logs (wait-for-postgres, wait-for-redis)
+kubectl logs -l app=mousike -n rag -c wait-for-postgres
+kubectl logs -l app=mousike -n rag -c wait-for-redis
+
+# Check main container logs
+kubectl logs -l app=mousike -n rag --tail=100
+```
+
+**Step 2 — Check Spring Boot health endpoint:**
+```bash
+# Local
+curl -s http://localhost:8080/actuator/health | jq .
+
+# In-cluster via port-forward
+kubectl port-forward svc/mousike-service 8080:8080 -n rag &
+curl -s http://localhost:8080/actuator/health | jq .
+```
+
+Expected healthy response:
+```json
+{
+  "status": "UP",
+  "components": {
+    "db": { "status": "UP", "details": { "database": "PostgreSQL" } },
+    "diskSpace": { "status": "UP" },
+    "ping": { "status": "UP" }
+  }
+}
+```
+
+**Step 3 — Common startup failures and fixes:**
+
+| Error in Logs | Root Cause | Fix |
+|---|---|---|
+| `Connection refused: postgres-service:5432` | Postgres not ready | Check `kubectl rollout status statefulset/postgres -n rag` |
+| `HikariPool: Connection is not available` | Wrong JDBC URL or credentials | Verify `SPRING_DATASOURCE_URL` env var and `rag-secrets` |
+| `OllamaModel: Connection refused` | Ollama not running on host | Start Ollama: `ollama serve` and ensure `OLLAMA_BASE_URL` is `http://host.docker.internal:11434` |
+| `NoSuchBeanDefinitionException: SyncMcpToolCallbackProvider` | document-service MCP server not reachable | Check document-service is running and `DOCUMENT_SERVICE_URL` env var |
+| `Table 'vector_store' doesn't exist` | PGVector schema not initialized | Ensure `spring.ai.vectorstore.pgvector.initialize-schema: true` |
+
+---
+
+### 19.2 Database & PGVector Troubleshooting
+
+#### Symptom: RAG returns "I don't have enough information" on every query
+
+**Step 1 — Verify PostgreSQL is running and the vector_store table has data:**
+```bash
+# Connect to PostgreSQL
+kubectl exec -it postgres-0 -n rag -- psql -U mousike -d mousike
+
+# Inside psql:
+\dt                    -- List tables
+SELECT count(*) FROM vector_store;   -- Should return >0 if documents were ingested
+```
+
+Expected:
+```
+ count
+-------
+   247
+```
+
+If `count = 0`, documents were never ingested (see Section 19.5).
+
+**Step 2 — Verify PGVector extension is loaded:**
+```sql
+SELECT * FROM pg_extension WHERE extname = 'vector';
+```
+
+If no rows returned:
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+**Step 3 — Inspect vector store schema and dimensions:**
+```sql
+-- Check the embedding column type and dimension
+SELECT column_name, data_type, udt_name
+FROM information_schema.columns
+WHERE table_name = 'vector_store';
+
+-- Verify embedding dimension matches config (768 for nomic-embed-text)
+SELECT vector_dims(embedding) FROM vector_store LIMIT 1;
+```
+
+Expected dimension: `768` (matches `spring.ai.vectorstore.pgvector.dimensions: 768`).
+
+If dimension mismatch, the embedding model was changed after table creation:
+```sql
+-- DESTRUCTIVE: Drop and recreate (only if you can re-ingest)
+DROP TABLE vector_store;
+-- Restart the app — initialize-schema: true will recreate it
+```
+
+**Step 4 — Test a manual similarity search:**
+```sql
+-- This shows the raw data stored in PGVector
+SELECT id, LEFT(content, 80) AS content_preview,
+       metadata->>'source' AS source,
+       metadata->>'category' AS category
+FROM vector_store
+LIMIT 10;
+```
+
+**Step 5 — Verify HNSW index exists:**
+```sql
+SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'vector_store';
+```
+
+Expected: An index using `hnsw` with `vector_cosine_ops`.
+
+---
+
+### 19.3 Chat System Troubleshooting
+
+#### Symptom: Chat returns empty response or hangs
+
+**Step 1 — Test the Ollama LLM directly:**
+```bash
+# Verify Ollama is running and llama3.2 is available
+curl -s http://localhost:11434/api/tags | jq '.models[].name'
+
+# Direct chat test (bypass Spring AI)
+curl -s http://localhost:11434/api/generate \
+  -d '{"model":"llama3.2","prompt":"Hello","stream":false}' | jq .response
+```
+
+If Ollama is unreachable:
+```bash
+ollama serve                    # Start Ollama
+ollama pull llama3.2           # Pull the model if missing
+ollama pull nomic-embed-text   # Pull embedding model
+```
+
+**Step 2 — Test chat via REST API:**
+```bash
+curl -s -X POST http://localhost:8080/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"What is a violin?","conversationId":"debug-test"}' | jq .
+```
+
+Expected response:
+```json
+{
+  "response": "A violin is a string instrument...",
+  "conversationId": "debug-test"
+}
+```
+
+**Step 3 — If chat hangs (timeout), check Ollama resource usage:**
+```bash
+# Check if Ollama is overloaded
+curl -s http://localhost:11434/api/ps | jq .
+
+# In application logs, look for timeout
+kubectl logs -l app=mousike -n rag | grep -i "timeout\|timed out"
+```
+
+Common cause: `num-ctx: 4096` in `application.yml` may be too large for available GPU/CPU memory. Reduce to `2048` if OOM.
+
+**Step 4 — Verify chat memory (JDBC) is working:**
+```bash
+# Check the chat memory table in PostgreSQL
+kubectl exec -it postgres-0 -n rag -- psql -U mousike -d mousike \
+  -c "SELECT conversation_id, type, LEFT(content, 60) FROM ai_chat_memory ORDER BY timestamp DESC LIMIT 10;"
+```
+
+Expected: Rows showing `USER` and `ASSISTANT` messages with your test conversation ID.
+
+If table doesn't exist, verify `spring.ai.chat.memory.repository.jdbc.initialize-schema: always` in `application.yml`.
+
+**Step 5 — Test streaming endpoint:**
+```bash
+curl -N -X POST http://localhost:8080/api/chat/stream \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"List 3 famous composers","conversationId":"stream-debug"}'
+```
+
+Expected: Server-sent events streaming token by token. If nothing appears, the reactive pipeline is broken — check for `reactor-core` dependency.
+
+---
+
+### 19.4 RAG Pipeline Troubleshooting
+
+#### Symptom: RAG always returns "I don't have enough information"
+
+The RAG pipeline has a 3-layer guardrail system. Each layer can cause a rejection.
+
+**Step 1 — Identify which layer is rejecting. Enable DEBUG logging:**
+```bash
+# Check application logs for guardrail messages
+kubectl logs -l app=mousike -n rag | grep -i "retrieval\|grounding\|threshold\|no data"
+```
+
+**Step 2 — Test Layer 1 (RagRetrievalGate) directly via the search API:**
+```bash
+# Semantic search uses the same VectorStore as RAG
+curl -s 'http://localhost:8080/api/search?q=beethoven+symphony&topK=5' | jq .
+```
+
+The `RagRetrievalGate` requires:
+- **Minimum score threshold**: `0.65` — documents below this score are filtered out
+- **Minimum chunk count**: `2` — at least 2 chunks must pass the threshold
+
+```java
+// RagRetrievalGate.java — the gatekeeper
+private static final double MINIMUM_SCORE_THRESHOLD = 0.65;
+private static final int MINIMUM_CHUNK_COUNT = 2;
+```
+
+If search returns 0 or 1 results:
+- **0 results**: No documents are similar enough. Either the vector store is empty (Section 19.2) or the query is outside the knowledge domain.
+- **1 result**: Only 1 chunk passed the 0.65 threshold, but the gate requires 2. The ingested documents may lack depth on this topic.
+
+**Step 3 — Test Layer 3 (OutputValidator) grounding check:**
+```java
+// OutputValidator.java — grounding ratio must be ≥ 0.30
+// It compares words (>4 chars) in the LLM response against retrieved chunk text
+double groundingRatio = (double) groundedWords / contentWords;
+if (groundingRatio < 0.3) {
+    // REJECTED: LLM response diverged too far from source documents
+}
+```
+
+To debug: add temporary logging to `OutputValidator.validate()`:
+```java
+log.debug("Grounding check: {}/{} words grounded (ratio={:.2f})",
+    groundedWords, contentWords, groundingRatio);
+```
+
+**Step 4 — Compare RAG modes to isolate the issue:**
+```bash
+# Test all 3 RAG modes with the same question
+QUESTION='{"question":"What are the major works of Bach?"}'
+
+# Naive (topK=5, threshold=0.50)
+curl -s -X POST 'http://localhost:8080/api/rag/query?mode=naive' \
+  -H 'Content-Type: application/json' -d "$QUESTION" | jq .
+
+# Advanced (topK=10, threshold=0.65, with QuestionAnswerAdvisor)
+curl -s -X POST 'http://localhost:8080/api/rag/query?mode=advanced' \
+  -H 'Content-Type: application/json' -d "$QUESTION" | jq .
+
+# Agentic (MCP tool-calling, no guardrails)
+curl -s -X POST 'http://localhost:8080/api/rag/query?mode=agentic' \
+  -H 'Content-Type: application/json' -d "$QUESTION" | jq .
+```
+
+Interpretation:
+| Naive | Advanced | Agentic | Diagnosis |
+|---|---|---|---|
+| Works | Fails | Works | Advanced threshold (0.65) too strict, or QuestionAnswerAdvisor misconfigured |
+| Fails | Fails | Works | Vector store has data but similarity scores are low; agentic bypasses guardrails |
+| Fails | Fails | Fails | No data in vector store OR Ollama is down |
+| Works | Works | Fails | MCP connection to document-service is broken (Section 19.7) |
+
+**Step 5 — Verify the Naive vs Advanced threshold difference:**
+```yaml
+# Naive RAG (AiConfig.java — ragChatClient)
+similarityThreshold: 0.50    # Lower bar
+topK: 5
+
+# Advanced RAG (AdvancedRagService.java — inline ChatClient)
+similarityThreshold: 0.65    # Higher bar
+topK: 10
+
+# RagRetrievalGate (used by both Naive and Advanced)
+MINIMUM_SCORE_THRESHOLD: 0.65  # Pre-filter before LLM call
+MINIMUM_CHUNK_COUNT: 2
+```
+
+Note: The Naive RAG ChatClient uses `0.50` threshold, but the `RagRetrievalGate` still uses `0.65`. So the gate may reject even when the advisor would have found results. This is by design — the gate prevents low-quality answers.
+
+---
+
+### 19.5 Document Ingestion Troubleshooting
+
+#### Symptom: Documents uploaded but not appearing in search results
+
+**Step 1 — Verify the document-service is running:**
+```bash
+curl -s http://localhost:8090/actuator/health | jq .
+```
+
+**Step 2 — Upload a test document and check the response:**
+```bash
+curl -s -X POST http://localhost:8090/api/ingest \
+  -F "file=@/path/to/test-document.pdf" \
+  -F "category=test" | jq .
+```
+
+Expected successful response:
+```json
+{
+  "filename": "test-document.pdf",
+  "chunksIngested": 15,
+  "success": true,
+  "error": ""
+}
+```
+
+If `success: false`, check the `error` field. Common errors:
+
+| Error Message | Root Cause | Fix |
+|---|---|---|
+| `TikaException: Unable to parse` | Unsupported file format or corrupted PDF | Test with a known-good PDF; check Apache Tika supported formats |
+| `Connection refused: localhost:11434` | Ollama not reachable from document-service | Verify `SPRING_AI_OLLAMA_BASE_URL` env var |
+| `Could not connect to postgres-service:5432` | Database connection failed | Check postgres pod status and credentials |
+| `Max upload size exceeded` | File larger than 50MB limit | See `spring.servlet.multipart.max-file-size: 50MB` |
+
+**Step 3 — Trace the ingestion pipeline step by step:**
+
+The pipeline is: **File → Tika Parser → Metadata Enrichment → Token Splitter → Embedding → PGVector**
+
+```bash
+# Check document-service logs for each pipeline stage
+kubectl logs -l app=document-service -n rag | grep -i "ingestion\|parsed\|chunks\|stored"
+```
+
+Expected log sequence:
+```
+Starting ingestion: file=music-theory.pdf category=theory
+Parsed 1 documents from music-theory.pdf
+Split into 42 chunks
+Ingestion complete: 42 chunks stored in PGVector
+```
+
+If logs stop at "Parsed" but never reach "Split":
+- The `TokenTextSplitter` failed — the document may have no extractable text (scanned PDF without OCR).
+
+If logs stop at "Split" but never reach "Ingestion complete":
+- The embedding step failed — Ollama `nomic-embed-text` model is unreachable or returned an error.
+
+**Step 4 — Verify the bulk ingestion job ran in Kubernetes:**
+```bash
+kubectl get jobs -n rag
+kubectl describe job document-ingester -n rag
+kubectl logs job/document-ingester -n rag --tail=50
+```
+
+Expected:
+```
+=== Starting bulk document ingestion ===
+docs/music-theory.pdf -> 42 chunks
+docs/composers-biographies.pdf -> 58 chunks
+docs/instruments-encyclopedia.pdf -> 73 chunks
+docs/jazz-history.pdf -> 74 chunks
+=== Ingestion complete: 247 total chunks stored ===
+```
+
+If the job shows `BackoffLimitExceeded`:
+```bash
+# The ingester retried 3 times and failed
+kubectl logs job/document-ingester -n rag | grep -i "error\|failed\|exception"
+```
+
+Common failures:
+- `ClassPathResource` not found: The PDF files aren't in `document-service/src/main/resources/docs/`
+- `IngestionStartupRunner` not triggered: The `ingestion` profile was not activated. The job command must include `--spring.profiles.active=ingestion,k8s`
+
+**Step 5 — Manually verify ingested data in PostgreSQL:**
+```bash
+kubectl exec -it postgres-0 -n rag -- psql -U mousike -d mousike
+
+-- Count by category
+SELECT metadata->>'category' AS category, count(*)
+FROM vector_store
+GROUP BY metadata->>'category';
+
+-- Sample content
+SELECT LEFT(content, 100), metadata->>'source', metadata->>'category'
+FROM vector_store
+LIMIT 5;
+```
+
+Expected:
+```
+ category    | count
+-------------+-------
+ theory      |    42
+ composers   |    58
+ instruments |    73
+ history     |    74
+```
+
+---
+
+### 19.6 Docling Service Troubleshooting
+
+#### Symptom: Docling pod stuck in pending or document conversion fails
+
+**Step 1 — Check Docling pod status:**
+```bash
+kubectl get pods -l app=docling -n rag
+kubectl describe pod -l app=docling -n rag | tail -30
+```
+
+Docling requires significant resources (`2Gi` memory, `1` CPU minimum). On resource-constrained clusters:
+```
+Events:
+  Warning  FailedScheduling  Insufficient memory
+```
+
+Fix: Increase Kind node resources or reduce Docling memory request.
+
+**Step 2 — Verify Docling health endpoint:**
+```bash
+# Direct health check
+curl -s http://localhost:5001/health
+# In-cluster
+kubectl exec -it $(kubectl get pod -l app=docling -n rag -o name) -n rag -- wget -qO- http://localhost:5001/health
+```
+
+**Step 3 — First boot takes 2-5 minutes** — Docling downloads ML models on startup:
+```bash
+kubectl logs -l app=docling -n rag --tail=30
+```
+
+Look for:
+```
+Downloading model: ...
+Loading pipeline: ...
+Ready to serve requests
+```
+
+The readiness probe is configured with generous timeouts for this reason:
+```yaml
+readinessProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 15
+  failureThreshold: 20    # 60s + (15s × 20) = 360s total
+```
+
+**Step 4 — Test Docling document conversion directly:**
+```bash
+# Docling API endpoint for PDF conversion
+curl -s -X POST http://localhost:5001/v1/convert \
+  -F "file=@/path/to/test.pdf" | jq '.pages | length'
+```
+
+**Step 5 — Docling cache is ephemeral:**
+
+The deployment uses `emptyDir` for the model cache:
+```yaml
+volumes:
+  - name: docling-cache
+    mountPath: /root/.cache/docling
+```
+
+This means every pod restart re-downloads models. For production, use a `PersistentVolumeClaim` instead.
+
+---
+
+### 19.7 MCP (Model Context Protocol) Troubleshooting
+
+#### Symptom: Agentic RAG fails with "Tool not found" or connection error
+
+The MCP architecture has two sides: **Client** (mousike-app) ↔ **Server** (document-service).
+
+**Step 1 — Verify the MCP server (document-service) is exposing the SSE endpoint:**
+```bash
+curl -s http://localhost:8090/mcp/sse
+```
+
+Expected: An SSE stream connection opens (may hang waiting for events — that's correct). If you get `404`, the MCP server is not configured.
+
+Check `document-service/src/main/resources/application.yml`:
+```yaml
+spring.ai.mcp.server:
+  enabled: true       # Must be true
+  name: document-service
+  version: "1.0.0"
+```
+
+**Step 2 — Verify MCP tools are registered on the server side:**
+
+The `McpServerConfig` registers tools via `MethodToolCallbackProvider`:
+```java
+// document-service: McpServerConfig.java
+@Bean
+public ToolCallbackProvider musicKnowledgeToolProvider(MusicKnowledgeTools tools) {
+    return MethodToolCallbackProvider.builder()
+            .toolObjects(tools)       // Registers all @Tool methods
+            .build();
+}
+```
+
+The `MusicKnowledgeTools` class exposes 3 tools:
+- `searchMusicKnowledge` — Full-text vector search
+- `searchByCategory` — Category-filtered search
+- `listAvailableDocuments` — Static document list
+
+**Step 3 — Verify MCP client (mousike-app) connection:**
+
+Check `mousike/src/main/resources/application.yml`:
+```yaml
+spring.ai.mcp.client:
+  enabled: true
+  type: SYNC               # Must be SYNC for SSE transport
+  sse:
+    connections:
+      document-service:
+        url: ${DOCUMENT_SERVICE_URL:http://localhost:8090}/mcp/sse
+```
+
+Common MCP client errors in logs:
+```bash
+kubectl logs -l app=mousike -n rag | grep -i "mcp\|tool\|callback"
+```
+
+| Error | Root Cause | Fix |
+|---|---|---|
+| `SyncMcpToolCallbackProvider not found` | MCP client failed to initialize | Check `DOCUMENT_SERVICE_URL` env var points to running document-service |
+| `Connection refused: document-service:8090` | document-service pod not ready | `kubectl rollout status deployment/document-service -n rag` |
+| `Tool 'searchMusicKnowledge' not found` | MCP SSE handshake failed | Restart both pods; check network policies |
+| `Read timed out (30s)` | Tool call took too long | Increase `request-timeout: 30s` in MCP client config |
+
+**Step 4 — Test agentic RAG end-to-end:**
+```bash
+curl -s -X POST 'http://localhost:8080/api/rag/query?mode=agentic' \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"What instruments did Bach compose for?"}' | jq .
+```
+
+**Step 5 — Verify the agenticChatClient has MCP tools registered:**
+
+In application logs during startup, look for:
+```
+Registering MCP tool callbacks: [searchMusicKnowledge, searchByCategory, listAvailableDocuments]
+```
+
+The `McpClientConfig` wires the `SyncMcpToolCallbackProvider` into the agentic ChatClient:
+```java
+// McpClientConfig.java — mousike-app
+@Bean("agenticChatClient")
+public ChatClient agenticChatClient(ChatModel chatModel, ChatMemory chatMemory,
+        SyncMcpToolCallbackProvider mcpToolCallbackProvider) {
+    return ChatClient.builder(chatModel)
+            .defaultToolCallbacks(mcpToolCallbackProvider)  // MCP tools
+            .build();
+}
+```
+
+---
+
+### 19.8 Tracing & Observability Troubleshooting
+
+#### Symptom: Phoenix shows 0 traces / Grafana Tempo has no traces
+
+This is the most common issue in the stack. Spring Boot 4 changed the tracing auto-configuration significantly.
+
+**Step 1 — Verify the critical dependency is present:**
+```kotlin
+// build.gradle.kts — THIS IS THE FIX for most tracing issues
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-opentelemetry")  // REQUIRED
+    implementation("io.micrometer:micrometer-tracing-bridge-otel")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
+}
+```
+
+In Spring Boot 4, `spring-boot-starter-opentelemetry` is **required** for tracing auto-configuration. Without it:
+- `SdkTracerProvider` bean is never created
+- `OtelTracer` bean is never created
+- `TracingObservationHandler` bean is never created
+- Metrics still work (Prometheus is pull-based), but traces don't (OTLP is push-based)
+
+**Step 2 — Verify tracing beans exist at runtime:**
+```bash
+# Check for tracing auto-configuration
+curl -s http://localhost:8080/actuator/conditions | jq '.contexts.application.positiveMatches | keys[]' | grep -i "trac\|otel\|opentelemetry"
+```
+
+Expected (healthy):
+```
+"OpenTelemetryAutoConfiguration"
+"OpenTelemetryTracingAutoConfiguration"
+"MicrometerTracingAutoConfiguration"
+```
+
+If NONE of these appear in positive matches, the `spring-boot-starter-opentelemetry` dependency is missing.
+
+**Step 3 — Verify SpanExporter beans are registered:**
+```bash
+curl -s http://localhost:8080/actuator/beans | jq '.contexts.application.beans | to_entries[] | select(.key | test("spanExporter|SpanExporter")) | .key'
+```
+
+Expected:
+```
+"phoenixSpanExporter"
+"grafanaSpanExporter"
+```
+
+These are defined in `ObservabilityConfig.java`:
+```java
+@Bean
+public SpanExporter phoenixSpanExporter() {
+    return OtlpHttpSpanExporter.builder()
+            .setEndpoint(phoenixOtlpUrl + "/v1/traces")    // http://phoenix-service:6006/v1/traces
+            .setTimeout(Duration.ofSeconds(10))
+            .build();
+}
+
+@Bean
+public SpanExporter grafanaSpanExporter() {
+    return OtlpHttpSpanExporter.builder()
+            .setEndpoint(grafanaOtlpUrl + "/v1/traces")    // http://grafana-lgtm-service:4318/v1/traces
+            .setTimeout(Duration.ofSeconds(10))
+            .build();
+}
+```
+
+**Step 4 — Verify OTLP endpoint connectivity:**
+```bash
+# Test Phoenix OTLP endpoint
+curl -s -o /dev/null -w "%{http_code}" http://localhost:6006/v1/traces
+
+# Test Grafana Tempo OTLP endpoint
+curl -s -o /dev/null -w "%{http_code}" http://localhost:4318/v1/traces
+```
+
+Expected: `200` or `405` (Method Not Allowed for GET — that's OK, it expects POST).
+If `000` or connection refused: the target service is down.
+
+**Step 5 — Verify sampling probability is 1.0:**
+```yaml
+# application.yml — must be 1.0 to capture all traces
+management:
+  tracing:
+    sampling:
+      probability: 1.0    # 0.0 = no traces, 1.0 = all traces
+```
+
+If set to `0.1`, only 10% of traces are captured — you may not see your test requests.
+
+**Step 6 — Spring Boot 4 property namespace change:**
+```yaml
+# OLD (Spring Boot 3.x) — DOES NOT WORK in Spring Boot 4
+management:
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+
+# NEW (Spring Boot 4.x) — CORRECT
+management:
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:4318/v1/traces
+```
+
+**Step 7 — Generate a trace and verify it appears:**
+```bash
+# Generate a trace
+curl -s -X POST http://localhost:8080/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Hello","conversationId":"trace-test"}'
+
+# Wait 5 seconds for export
+sleep 5
+
+# Check Phoenix for spans
+curl -s 'http://localhost:6006/v1/projects/default/spans?limit=10' | jq '.data | length'
+```
+
+Expected: At least 1-3 spans (HTTP server span, chat model span, etc.).
+
+**Step 8 — Check for observation-specific configuration:**
+```yaml
+# These must be true to see AI-specific spans
+spring.ai.chat.observations.enabled: true
+spring.ai.chat.observations.include-prompt: true      # See prompt text in spans
+spring.ai.chat.observations.include-completion: true   # See LLM response in spans
+spring.ai.embedding.observations.enabled: true
+spring.ai.vectorstore.observations.enabled: true
+```
+
+**Step 9 — Verify traceId appears in application logs:**
+```bash
+kubectl logs -l app=mousike -n rag | grep "traceId="
+```
+
+Expected log format (from `application.yml` logging pattern):
+```
+14:23:45.678 [http-nio-8080-exec-1] DEBUG c.e.m.chat.ChatService - traceId=abc123def456 spanId=789xyz - Processing chat
+```
+
+If `traceId=` is always empty, the `TracingObservationHandler` is not active.
+
+---
+
+### 19.9 Prometheus Metrics Troubleshooting
+
+#### Symptom: Grafana dashboards show no metrics
+
+**Step 1 — Verify the Prometheus metrics endpoint:**
+```bash
+curl -s http://localhost:8080/actuator/prometheus | head -20
+```
+
+Expected: Prometheus text format metrics:
+```
+# HELP jvm_memory_used_bytes Used JVM memory
+# TYPE jvm_memory_used_bytes gauge
+jvm_memory_used_bytes{area="heap",id="G1 Eden Space"} 4.2E7
+```
+
+**Step 2 — Check for Spring AI-specific metrics:**
+```bash
+curl -s http://localhost:8080/actuator/prometheus | grep -i "spring_ai\|chat\|embedding"
+```
+
+Expected metrics:
+```
+spring_ai_chat_client_duration_seconds_count{...}
+spring_ai_chat_client_duration_seconds_sum{...}
+spring_ai_embedding_duration_seconds_count{...}
+```
+
+**Step 3 — Verify Prometheus scrape annotations on the pod:**
+```yaml
+# k8s/mousike/deployment.yaml — these annotations tell Prometheus to scrape
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/actuator/prometheus"
+```
+
+**Step 4 — Check Grafana LGTM's Prometheus is scraping:**
+```bash
+# Access Prometheus UI
+curl -s 'http://localhost:9090/api/v1/targets' | jq '.data.activeTargets[] | {scrapeUrl, health}'
+```
+
+---
+
+### 19.10 Semantic Search Troubleshooting
+
+#### Symptom: Search returns empty results or irrelevant matches
+
+**Step 1 — Test search API directly:**
+```bash
+# Basic search
+curl -s 'http://localhost:8080/api/search?q=violin+concerto&topK=5' | jq .
+
+# Search with category filter
+curl -s 'http://localhost:8080/api/search?q=violin&category=instruments&topK=5' | jq .
+```
+
+**Step 2 — If search returns empty but vector_store has data:**
+
+The `SemanticSearchService` uses a similarity threshold of `0.6`:
+```java
+// SemanticSearchService.java
+var requestBuilder = SearchRequest.builder()
+        .query(query)
+        .topK(topK > 0 ? topK : 5)
+        .similarityThreshold(0.6);    // Minimum cosine similarity
+```
+
+Test with a broader query that matches ingested content more closely.
+
+**Step 3 — If category filter returns empty but unfiltered search works:**
+
+The filter expression uses PGVector metadata JSON filtering:
+```java
+var filter = new FilterExpressionBuilder().eq("category", category).build();
+```
+
+Verify the category metadata was set during ingestion:
+```sql
+SELECT DISTINCT metadata->>'category' FROM vector_store;
+```
+
+Expected categories: `theory`, `composers`, `instruments`, `history` (set by `IngestionStartupRunner`).
+
+**Step 4 — If results are irrelevant (low quality):**
+
+The embedding model quality matters. `nomic-embed-text` produces 768-dim embeddings. If you switched models, the existing embeddings in PGVector are incompatible.
+
+```bash
+# Verify which embedding model Ollama is using
+curl -s http://localhost:11434/api/tags | jq '.models[] | select(.name | test("nomic"))'
+```
+
+---
+
+### 19.11 Kubernetes Cluster Troubleshooting
+
+#### Symptom: Cluster won't start or pods are not schedulable
+
+**Step 1 — Verify Kind cluster is running:**
+```bash
+kind get clusters
+docker ps | grep kind
+kubectl cluster-info --context kind-mousike-cluster
+```
+
+**Step 2 — Check all pods in the rag namespace:**
+```bash
+kubectl get all -n rag
+```
+
+Expected (all 7 pods + 1 job):
+```
+NAME                                READY   STATUS      RESTARTS   AGE
+pod/postgres-0                      1/1     Running     0          10m
+pod/redis-xxx                       1/1     Running     0          10m
+pod/docling-xxx                     1/1     Running     0          10m
+pod/phoenix-xxx                     1/1     Running     0          10m
+pod/grafana-lgtm-xxx                1/1     Running     0          10m
+pod/document-service-xxx            1/1     Running     0          10m
+pod/mousike-xxx                     1/1     Running     0          10m
+pod/document-ingester-xxx           0/1     Completed   0          10m
+```
+
+**Step 3 — Common Kind cluster issues:**
+
+| Symptom | Root Cause | Fix |
+|---|---|---|
+| `imagePullPolicy: Never` + `ErrImageNeverPull` | Image not loaded into Kind | `kind load docker-image mousike-app:latest --name mousike-cluster` |
+| Port-forward not working | NodePort not mapped in kind-config.yaml | Check `k8s/kind-config.yaml` extraPortMappings |
+| `host.docker.internal` not resolving | Kind doesn't support it on Linux | Use `docker network inspect kind` to find host IP |
+| Postgres PVC stuck in Pending | No default StorageClass | `kubectl get sc` — Kind provides `standard` by default |
+
+**Step 4 — Rebuild and redeploy a single service:**
+```bash
+# Rebuild mousike-app
+./gradlew :mousike:bootBuildImage --imageName=mousike-app:latest
+
+# Load into Kind
+kind load docker-image mousike-app:latest --name mousike-cluster
+
+# Restart the deployment
+kubectl rollout restart deployment/mousike -n rag
+kubectl rollout status deployment/mousike -n rag --timeout=120s
+```
+
+**Step 5 — Full cluster reset (nuclear option):**
+```bash
+kind delete cluster --name mousike-cluster
+./scripts/cluster-up.sh
+```
+
+**Step 6 — Check inter-service connectivity:**
+```bash
+# From mousike pod, verify it can reach all services
+kubectl exec -it $(kubectl get pod -l app=mousike -n rag -o jsonpath='{.items[0].metadata.name}') -n rag -- sh -c '
+  wget -qO- http://postgres-service:5432 2>&1 | head -1
+  wget -qO- http://document-service:8090/actuator/health 2>&1 | head -1
+  wget -qO- http://phoenix-service:6006/healthz 2>&1 | head -1
+  wget -qO- http://grafana-lgtm-service:4318/v1/traces 2>&1 | head -1
+'
+```
+
+---
+
+### 19.12 E2E Test Troubleshooting
+
+#### Symptom: Playwright tests fail with timeouts or assertion errors
+
+**Step 1 — Verify all services are reachable before running tests:**
+```bash
+# Tests expect these endpoints
+curl -s http://localhost:8080/actuator/health | jq .status   # mousike
+curl -s http://localhost:8090/actuator/health | jq .status   # document-service
+curl -s http://localhost:6006/healthz                          # phoenix
+curl -s http://localhost:3000/api/health | jq .status         # grafana
+curl -s http://localhost:11434/api/tags | jq '.models | length'  # ollama
+```
+
+**Step 2 — Run a single test file for debugging:**
+```bash
+cd e2e
+npx playwright test tests/full-stack/01-infrastructure.spec.ts --reporter=line
+```
+
+**Step 3 — Common E2E test failures:**
+
+| Test File | Common Failure | Root Cause | Fix |
+|---|---|---|---|
+| `01-infrastructure` | `Connection refused :8080` | mousike pod not ready | Wait for readiness probe |
+| `02-llm-chat` | `Timeout 30s` | Ollama slow on first inference | Increase test timeout or warm up Ollama |
+| `03-embedding` | `Expected >0, got 0` | nomic-embed-text not pulled | `ollama pull nomic-embed-text` |
+| `05-rag-query` | `"I don't have enough information"` | Vector store empty | Run document ingestion first |
+| `07-mcp` | `MCP tool failed` | document-service MCP endpoint down | Check port 8090 |
+| `08-observability` | `Metric not found` | Metrics not yet scraped | Retry — timing issue |
+| `10-phoenix-screenshots` | `Locator timeout` | Phoenix UI changed selectors | Update test locators |
+
+**Step 4 — Debug with headed browser:**
+```bash
+cd e2e
+npx playwright test tests/full-stack/10-phoenix-trace-screenshots.spec.ts --headed --timeout=120000
+```
+
+**Step 5 — Phoenix screenshot test specifics:**
+
+The Phoenix UI uses React with dynamic rendering. Common gotchas:
+```typescript
+// Modal overlay intercepts clicks on spans
+// Fix: dismiss with Escape, use force: true
+const overlay = page.locator('[data-testid="modal-overlay"]');
+if (await overlay.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await page.keyboard.press('Escape');
+}
+await chatSpan.click({ force: true });
+
+// Phoenix uses base64 project IDs, NOT string names in URLs
+// WRONG: /projects/default  → "Incorrect padding" error
+// RIGHT: Navigate via UI clicks
+await page.locator('text=default').first().click();
+```
+
+**Step 6 — Run full E2E suite:**
+```bash
+cd e2e
+npx playwright test --reporter=line
+```
+
+Expected: `80 passed` (all 80 tests across 10 test files).
+
+---
+
+### 19.13 Build & Dependency Troubleshooting
+
+#### Symptom: Gradle build fails or dependency resolution errors
+
+**Step 1 — Check Gradle build:**
+```bash
+./gradlew :mousike:build --info 2>&1 | tail -20
+./gradlew :document-service:build --info 2>&1 | tail -20
+```
+
+**Step 2 — Spring AI BOM version mismatch:**
+
+The project uses Spring AI 2.0.0-M2 (milestone release). This requires the Spring Milestones repository:
+```kotlin
+// settings.gradle.kts or build.gradle.kts
+repositories {
+    mavenCentral()
+    maven { url = uri("https://repo.spring.io/milestone") }
+}
+```
+
+If you see `Could not find spring-ai-starter-model-ollama:2.0.0-M2`:
+- The milestone repository is missing from your Gradle config.
+
+**Step 3 — Verify dependency tree for tracing:**
+```bash
+./gradlew :mousike:dependencies --configuration runtimeClasspath | grep -i "otel\|tracing\|micrometer"
+```
+
+Expected:
+```
++--- org.springframework.boot:spring-boot-starter-opentelemetry
+|    +--- io.opentelemetry:opentelemetry-sdk
+|    +--- io.micrometer:micrometer-tracing
++--- io.micrometer:micrometer-tracing-bridge-otel
++--- io.opentelemetry:opentelemetry-exporter-otlp
++--- io.micrometer:micrometer-registry-prometheus
+```
+
+If `spring-boot-starter-opentelemetry` is missing from the tree, add it to `build.gradle.kts`.
+
+**Step 4 — Docker image build issues:**
+```bash
+# Spring Boot's built-in buildpack (no Dockerfile needed)
+./gradlew :mousike:bootBuildImage --imageName=mousike-app:latest
+
+# If buildpack fails, check Docker daemon is running
+docker info
+```
+
+Common buildpack errors:
+- `Cannot connect to the Docker daemon`: Start Docker Desktop
+- `Insufficient memory for buildpack`: Increase Docker memory to ≥4GB
+- `Builder image pull failed`: Check internet connectivity
+
+---
+
+### 19.14 Troubleshooting Decision Tree
+
+Use this flowchart to quickly identify which section to read:
+
+```
+Start: What's broken?
+│
+├─ App won't start → 19.1 (Health & Startup)
+│
+├─ Chat returns nothing → 19.3 (Chat System)
+│  └─ Is Ollama running? → ollama serve && ollama pull llama3.2
+│
+├─ RAG always says "I don't have enough information"
+│  ├─ Search returns 0 results → 19.2 (Database) — is vector_store empty?
+│  │  └─ Yes → 19.5 (Document Ingestion) — did ingestion run?
+│  │     └─ No → Run ingestion job or upload docs via API
+│  ├─ Search returns results but RAG rejects
+│  │  └─ 19.4 (RAG Pipeline) — which guardrail layer is rejecting?
+│  └─ Agentic RAG fails but Naive works
+│     └─ 19.7 (MCP) — document-service connection issue
+│
+├─ Phoenix shows 0 traces → 19.8 (Tracing)
+│  └─ Missing spring-boot-starter-opentelemetry? → Add dependency
+│
+├─ Grafana shows no metrics → 19.9 (Prometheus Metrics)
+│
+├─ Search returns wrong results → 19.10 (Semantic Search)
+│
+├─ K8s pods not running → 19.11 (Kubernetes)
+│
+├─ E2E tests failing → 19.12 (E2E Tests)
+│
+├─ Build fails → 19.13 (Build & Dependencies)
+│
+└─ Docling not ready → 19.6 (Docling) — wait 2-5 min for ML model download
+```
+
+---
+
+### 19.15 Quick Health Check Script
+
+Run this script to verify the entire stack in one go:
+
+```bash
+#!/bin/bash
+echo "=== Mousike Stack Health Check ==="
+
+check() {
+  local name=$1 url=$2 expected=$3
+  status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$url" 2>/dev/null)
+  if [ "$status" = "$expected" ]; then
+    echo "  ✓ $name ($url) — HTTP $status"
+  else
+    echo "  ✗ $name ($url) — HTTP $status (expected $expected)"
+  fi
+}
+
+echo ""
+echo "--- Services ---"
+check "Mousike App"       "http://localhost:8080/actuator/health" "200"
+check "Document Service"  "http://localhost:8090/actuator/health" "200"
+check "Ollama"            "http://localhost:11434/api/tags"       "200"
+check "Phoenix"           "http://localhost:6006/healthz"         "200"
+check "Grafana"           "http://localhost:3000/api/health"      "200"
+
+echo ""
+echo "--- Observability ---"
+check "Prometheus metrics" "http://localhost:8080/actuator/prometheus" "200"
+check "Phoenix OTLP"      "http://localhost:6006/v1/traces"          "200"
+check "Grafana OTLP"      "http://localhost:4318/v1/traces"          "405"
+
+echo ""
+echo "--- Database ---"
+count=$(kubectl exec -it postgres-0 -n rag -- psql -U mousike -d mousike -t -c "SELECT count(*) FROM vector_store;" 2>/dev/null | tr -d ' ')
+if [ -n "$count" ] && [ "$count" -gt 0 ]; then
+  echo "  ✓ PGVector vector_store — $count documents"
+else
+  echo "  ✗ PGVector vector_store — empty or unreachable"
+fi
+
+echo ""
+echo "--- LLM Models ---"
+models=$(curl -s http://localhost:11434/api/tags 2>/dev/null | python3 -c "import sys,json; [print(f'  ✓ {m[\"name\"]}') for m in json.load(sys.stdin).get('models',[])]" 2>/dev/null)
+if [ -n "$models" ]; then
+  echo "$models"
+else
+  echo "  ✗ Ollama unreachable or no models"
+fi
+
+echo ""
+echo "=== Health Check Complete ==="
 ```
