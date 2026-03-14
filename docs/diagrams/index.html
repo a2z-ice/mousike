@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mousike — Visual Diagrams</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  h1 {
+    color: #f0f6fc;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+  .subtitle {
+    color: #8b949e;
+    font-size: 1.1rem;
+    margin-bottom: 2.5rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.25rem;
+    max-width: 1200px;
+  }
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, transform 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .card:hover {
+    border-color: #58a6ff;
+    transform: translateY(-2px);
+  }
+  .card-number {
+    font-size: 0.85rem;
+    color: #58a6ff;
+    font-weight: 600;
+  }
+  .card-title {
+    font-size: 1.2rem;
+    color: #f0f6fc;
+    font-weight: 600;
+  }
+  .card-desc {
+    color: #8b949e;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  footer {
+    margin-top: 3rem;
+    color: #484f58;
+    font-size: 0.85rem;
+  }
+  footer code {
+    background: #161b22;
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+</style>
+</head>
+<body>
+  <h1>Mousike — Visual Diagrams</h1>
+  <p class="subtitle">Interactive, animated HTML diagrams for the Mousike platform</p>
+  <div class="grid">
+    <a class="card" href="01-architecture-overview.html">
+      <span class="card-number">01</span>
+      <span class="card-title">Architecture Overview</span>
+      <span class="card-desc">Full system architecture with animated data flow between all services</span>
+    </a>
+    <a class="card" href="02-rag-pipeline-flow.html">
+      <span class="card-number">02</span>
+      <span class="card-title">RAG Pipeline Flow</span>
+      <span class="card-desc">Interactive 3-mode RAG pipeline (Naive / Advanced / Agentic) with guardrail animations</span>
+    </a>
+    <a class="card" href="03-request-lifecycle.html">
+      <span class="card-number">03</span>
+      <span class="card-title">Request Lifecycle</span>
+      <span class="card-desc">Animated sequence diagram: chat message through all components with trace timeline</span>
+    </a>
+    <a class="card" href="04-kubernetes-topology.html">
+      <span class="card-number">04</span>
+      <span class="card-title">Kubernetes Topology</span>
+      <span class="card-desc">K8s cluster layout with all 7 pods, services, port mappings, and health indicators</span>
+    </a>
+    <a class="card" href="05-observability-trace-flow.html">
+      <span class="card-number">05</span>
+      <span class="card-title">Observability &amp; Tracing</span>
+      <span class="card-desc">Dual OTLP export to Phoenix + Grafana with animated trace span visualization</span>
+    </a>
+    <a class="card" href="06-document-ingestion-pipeline.html">
+      <span class="card-number">06</span>
+      <span class="card-title">Document Ingestion</span>
+      <span class="card-desc">Step-by-step pipeline: PDF → Tika → Splitter → Embedding → PGVector</span>
+    </a>
+    <a class="card" href="07-mcp-communication.html">
+      <span class="card-number">07</span>
+      <span class="card-title">MCP Communication</span>
+      <span class="card-desc">MCP client-server SSE protocol with tool call sequence diagram</span>
+    </a>
+  </div>
+  <footer>
+    Dark theme &bull; CSS-only animations &bull; SVG-based &bull; Self-contained HTML files
+  </footer>
+</body>
+</html>
