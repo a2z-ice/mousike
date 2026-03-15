@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Two Spring Boot Applications (Gradle multi-project)
 
 - **`mousike/`** — Main application (port 8080): Vaadin UI, REST API, MCP Client, Chat with JDBC memory, RAG advisors (naive/advanced/agentic), classification, extraction, semantic search
-- **`document-service/`** — MCP Server (port 8091): Exposes tools via HTTP+SSE at `/mcp/sse`, document ingestion ETL pipeline (Tika → PGVector), vector store search tools
+- **`document-service/`** — MCP Server (port 8090 internal, 8091 via Kind): Exposes tools via HTTP+SSE at `/mcp/sse`, document ingestion ETL pipeline (Tika → PGVector), vector store search tools
 
 ### MCP Flow
 ```
@@ -27,6 +27,7 @@ User Question → mousike-app (MCP Client) → Ollama (decides tool calls) → M
 
 ### Infrastructure (all in Kind cluster, namespace `rag`)
 - PostgreSQL + pgvector (StatefulSet) — vector store + JPA entities
+- Redis — caching layer (configured via `RedisConfig`)
 - Docling Serve — document parsing (PDF/DOCX → structured text)
 - Phoenix (Arize) — LLM-specific observability (prompt/completion traces)
 - Grafana LGTM — infrastructure observability (metrics/logs/traces)
@@ -67,8 +68,14 @@ kubectl rollout restart deployment/mousike -n rag
 
 # Run e2e tests (requires cluster running)
 cd e2e && npx playwright test
-npx playwright test --project=api   # API tests only
-npx playwright test --project=ui    # UI tests only
+npx playwright test --project=api        # API tests only
+npx playwright test --project=ui         # UI tests only
+npx playwright test --project=full-stack # Sequential infrastructure-to-tracing tests
+
+# Cluster management scripts
+./scripts/cluster-up.sh                           # Create Kind cluster + deploy all services
+./scripts/redeploy-app.sh mousike                 # Rebuild + redeploy mousike-app
+./scripts/redeploy-app.sh document-service        # Rebuild + redeploy document-service
 ```
 
 ## Key Technology Choices
@@ -83,7 +90,8 @@ npx playwright test --project=ui    # UI tests only
 | Document Parsing | Tika via `spring-ai-tika-document-reader` |
 | Observability | Dual export: Grafana LGTM (OTLP HTTP) + Phoenix (OTLP gRPC) |
 | UI | Vaadin 25.0.5 embedded in Spring Boot jar (production mode build) |
-| E2E Testing | Playwright with API + UI test projects |
+| Caching | Redis (deployed in Kind cluster) |
+| E2E Testing | Playwright with API + UI + full-stack test projects |
 
 ## RAG Modes
 
@@ -117,7 +125,7 @@ Spring AI auto-instruments all AI operations when `spring.ai.*.observations.enab
 ## Package Structure
 
 Both modules share the base package `com.example.mousike`. Key packages in `mousike/`:
-- `config/` — AiConfig (ChatClient beans), McpClientConfig, ObservabilityConfig
+- `config/` — AiConfig (ChatClient beans), McpClientConfig, ObservabilityConfig, RedisConfig
 - `rag/` — NaiveRagService, AdvancedRagService, AgenticRagService
 - `guardrails/` — RagRetrievalGate, OutputValidator, RetrievalResult
 - `chat/` — ChatService (streaming + sync with JDBC memory)
@@ -141,10 +149,17 @@ All manifests are in `k8s/`. The Kind cluster is named `mousike-cluster`. All wo
 | OTLP HTTP | 30418 | 4318 |
 | Phoenix | 30600 | 6006 |
 
+## Spring Profiles
+
+- **default**: Local development (Ollama at `localhost:11434`, Postgres at `localhost:5432`)
+- **k8s**: Kubernetes deployment (Ollama at `host.docker.internal:11434`, service URLs from ConfigMap)
+- **ingestion**: Activates document ingestion ETL pipeline (used in K8s Job)
+
 ## E2E Tests
 
-Located in `e2e/`. Uses Playwright with two projects:
+Located in `e2e/`. Uses Playwright (120s timeout, 1 retry) with three projects:
 - **api**: Health checks, chat API, search, classify, extract, RAG, document-service
 - **ui**: Navigation, Vaadin views (chat, search, composer, monitor)
+- **full-stack**: 10 sequential tests (01-10) covering infrastructure through Phoenix tracing
 
 Run with `cd e2e && npx playwright test`. Requires the Kind cluster to be running.
