@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mousike — Comprehensive Troubleshooting Guide</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --bg3: #1c2333;
+    --border: #30363d; --text: #c9d1d9; --text2: #8b949e;
+    --heading: #f0f6fc; --blue: #58a6ff; --green: #3fb950;
+    --red: #f85149; --orange: #d29922; --purple: #bc8cff;
+    --cyan: #39d4e7; --yellow: #e3b341;
+    --sidebar-w: 300px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+
+  /* Sidebar */
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh;
+    background: var(--bg2); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 1.5rem 0; z-index: 100;
+  }
+  .sidebar h2 { color: var(--heading); font-size: 1rem; padding: 0 1.2rem; margin-bottom: 1rem; }
+  .sidebar a {
+    display: block; padding: 0.35rem 1.2rem; color: var(--text2); text-decoration: none;
+    font-size: 0.85rem; border-left: 3px solid transparent; transition: all 0.2s;
+  }
+  .sidebar a:hover { color: var(--blue); background: rgba(88,166,255,0.06); border-left-color: var(--blue); }
+  .sidebar .nav-group { margin-bottom: 0.8rem; }
+  .sidebar .nav-group-title {
+    color: var(--heading); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 0.5rem 1.2rem 0.2rem; font-weight: 600;
+  }
+  .sidebar .back-link { color: var(--blue); font-weight: 600; margin-bottom: 1rem; padding: 0.5rem 1.2rem; display: flex; align-items: center; gap: 0.4rem; }
+
+  /* Main */
+  .main { margin-left: var(--sidebar-w); padding: 2.5rem 3rem 4rem; max-width: 1100px; }
+  h1 { color: var(--heading); font-size: 2.2rem; margin-bottom: 0.5rem; }
+  .subtitle { color: var(--text2); font-size: 1.1rem; margin-bottom: 2rem; }
+  h2 { color: var(--heading); font-size: 1.6rem; margin: 2.5rem 0 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  h3 { color: var(--cyan); font-size: 1.2rem; margin: 1.8rem 0 0.8rem; }
+  h4 { color: var(--orange); font-size: 1.05rem; margin: 1.3rem 0 0.5rem; }
+  p { margin-bottom: 0.8rem; }
+
+  /* Issue cards */
+  .issue {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1.2rem 1.5rem; margin: 1rem 0; border-left: 4px solid var(--red);
+  }
+  .issue.warning { border-left-color: var(--orange); }
+  .issue.info { border-left-color: var(--blue); }
+  .issue.success { border-left-color: var(--green); }
+  .issue-title { color: var(--heading); font-weight: 600; font-size: 1.05rem; margin-bottom: 0.3rem; }
+  .issue-label {
+    display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem;
+    border-radius: 10px; margin-left: 0.5rem; vertical-align: middle;
+  }
+  .label-error { background: rgba(248,81,73,0.2); color: var(--red); }
+  .label-warn { background: rgba(210,153,34,0.2); color: var(--orange); }
+  .label-info { background: rgba(88,166,255,0.2); color: var(--blue); }
+  .label-fix { background: rgba(63,185,80,0.2); color: var(--green); }
+
+  /* Expected vs Actual */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0.8rem 0; }
+  .compare-box { background: var(--bg3); border-radius: 6px; padding: 0.8rem 1rem; border: 1px solid var(--border); }
+  .compare-box.expected { border-top: 3px solid var(--green); }
+  .compare-box.actual { border-top: 3px solid var(--red); }
+  .compare-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+  .compare-box.expected .compare-label { color: var(--green); }
+  .compare-box.actual .compare-label { color: var(--red); }
+
+  pre, code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; }
+  pre {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+    padding: 1rem 1.2rem; overflow-x: auto; font-size: 0.85rem; margin: 0.8rem 0; line-height: 1.5;
+  }
+  code { background: var(--bg3); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.9em; color: var(--cyan); }
+
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { padding: 0.6rem 0.8rem; border: 1px solid var(--border); text-align: left; }
+  th { background: var(--bg3); color: var(--heading); font-weight: 600; }
+  tr:nth-child(even) { background: rgba(22,27,34,0.5); }
+
+  .steps { counter-reset: step-counter; list-style: none; padding: 0; }
+  .steps li {
+    counter-increment: step-counter; position: relative; padding: 0.5rem 0 0.5rem 2.5rem; margin-bottom: 0.4rem;
+  }
+  .steps li::before {
+    content: counter(step-counter); position: absolute; left: 0; top: 0.45rem;
+    width: 1.6rem; height: 1.6rem; background: var(--blue); color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600;
+  }
+
+  .flowchart {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1.2rem; margin: 1rem 0; font-family: monospace; font-size: 0.82rem;
+    line-height: 1.4; white-space: pre; overflow-x: auto; color: var(--text);
+  }
+
+  .tag { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500; }
+  .tag-component { background: rgba(188,140,255,0.15); color: var(--purple); }
+  .tag-k8s { background: rgba(88,166,255,0.15); color: var(--blue); }
+  .tag-llm { background: rgba(57,212,231,0.15); color: var(--cyan); }
+
+  .quick-ref { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; }
+  .quick-ref h4 { margin-top: 0; color: var(--green); }
+
+  .accordion { margin: 0.5rem 0; }
+  .accordion summary {
+    cursor: pointer; padding: 0.6rem 0; color: var(--blue); font-weight: 500;
+    list-style: none; display: flex; align-items: center; gap: 0.5rem;
+  }
+  .accordion summary::before { content: "▶"; font-size: 0.7rem; transition: transform 0.2s; }
+  .accordion[open] summary::before { transform: rotate(90deg); }
+  .accordion .content { padding: 0.5rem 0 0.5rem 1.2rem; }
+
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 1.5rem; }
+    .compare { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar Navigation -->
+<nav class="sidebar">
+  <a href="index.html" class="back-link">&#8592; Back to Diagrams</a>
+  <h2>Troubleshooting Guide</h2>
+
+  <div class="nav-group">
+    <div class="nav-group-title">Quick Reference</div>
+    <a href="#quick-diagnostics">Quick Diagnostics Checklist</a>
+    <a href="#decision-tree">Troubleshooting Decision Tree</a>
+    <a href="#health-endpoints">Health Endpoint Reference</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-title">Infrastructure</div>
+    <a href="#docker-desktop">Docker Desktop</a>
+    <a href="#kind-cluster">Kind Cluster</a>
+    <a href="#kubectl-pods">Kubernetes Pods</a>
+    <a href="#port-mapping">Port Mapping Issues</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-title">Databases & Storage</div>
+    <a href="#postgresql">PostgreSQL / PGVector</a>
+    <a href="#redis">Redis</a>
+    <a href="#vector-store">Vector Store Queries</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-title">LLM & AI</div>
+    <a href="#ollama">Ollama Runtime</a>
+    <a href="#llm-models">Model Issues</a>
+    <a href="#embeddings">Embedding Failures</a>
+    <a href="#context-window">Context Window Limits</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-title">MCP (Model Context Protocol)</div>
+    <a href="#mcp-connection">MCP Connection</a>
+    <a href="#mcp-tools">MCP Tool Calls</a>
+    <a href="#mcp-sse">SSE Transport</a>
+    <a href="#mcp-timeout">MCP Timeouts</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-title">RAG Pipeline</div>
+    <a href="#rag-no-results">No Results / Empty Answers</a>
+    <a href="#rag-hallucination">Hallucination Detection</a>
+    <a href="#rag-guardrails">Guardrail Failures</a>
+    <a href="#rag-modes">Mode-Specific Issues</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-title">Application</div>
+    <a href="#chat-memory">Chat Memory</a>
+    <a href="#document-ingestion">Document Ingestion</a>
+    <a href="#rest-api">REST API Errors</a>
+    <a href="#vaadin-ui">Vaadin UI</a>
+    <a href="#startup-failures">Startup Failures</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-title">Observability</div>
+    <a href="#phoenix-traces">Phoenix Traces</a>
+    <a href="#grafana-metrics">Grafana Metrics</a>
+    <a href="#prometheus">Prometheus</a>
+    <a href="#log-analysis">Log Analysis</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-title">E2E Tests & Build</div>
+    <a href="#e2e-tests">E2E Test Failures</a>
+    <a href="#build-issues">Build Issues</a>
+    <a href="#image-loading">Image Loading</a>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="main">
+
+<h1>Comprehensive Troubleshooting Guide</h1>
+<p class="subtitle">Diagnose and fix every component — from Docker Desktop to LLM output validation</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="quick-diagnostics">Quick Diagnostics Checklist</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<p>Run these commands first to get a snapshot of system health. Most issues can be identified from this checklist alone.</p>
+
+<div class="quick-ref">
+<h4>30-Second Health Check</h4>
+<pre>
+# 1. Are all pods running?
+kubectl get pods -n rag
+
+# 2. Is the app healthy?
+curl -s http://localhost:8080/actuator/health | python3 -m json.tool
+
+# 3. Is Ollama responding?
+curl -s http://localhost:11434/api/tags | python3 -m json.tool
+
+# 4. Is document-service healthy?
+curl -s http://localhost:8091/actuator/health | python3 -m json.tool
+
+# 5. Can the app reach the LLM? (quick chat test)
+curl -s -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Say hello in one word"}' --max-time 30
+
+# 6. Is Phoenix collecting traces?
+curl -s http://localhost:6006/healthz
+
+# 7. Is Grafana up?
+curl -s http://localhost:3000/api/health
+</pre>
+</div>
+
+<h3>Expected Output for Healthy System</h3>
+
+<div class="compare">
+  <div class="compare-box expected">
+    <div class="compare-label">Expected: kubectl get pods -n rag</div>
+<pre style="border:none;padding:0.5rem;margin:0;background:transparent">
+NAME                                READY   STATUS    RESTARTS   AGE
+docling-6f8b9c7d4-xxxxx            1/1     Running   0          10m
+grafana-lgtm-5c8b7d6f4-xxxxx       1/1     Running   0          10m
+mousike-7d8f9c6b5-xxxxx            1/1     Running   0          10m
+document-service-8c9f7d5b4-xxxxx   1/1     Running   0          10m
+phoenix-4b7c8d9f3-xxxxx            1/1     Running   0          10m
+postgres-0                         1/1     Running   0          10m
+redis-5d6f7c8b9-xxxxx              1/1     Running   0          10m
+</pre>
+  </div>
+  <div class="compare-box actual">
+    <div class="compare-label">Problem Indicators</div>
+<pre style="border:none;padding:0.5rem;margin:0;background:transparent">
+STATUS = CrashLoopBackOff  → Container keeps crashing
+STATUS = Init:0/2          → Init container stuck
+STATUS = Pending           → No node can schedule pod
+STATUS = ImagePullBackOff  → Image not found in Kind
+READY  = 0/1               → Readiness probe failing
+RESTARTS > 3               → Something is crashing
+</pre>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="decision-tree">Troubleshooting Decision Tree</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="flowchart">
+                        ┌─────────────────────┐
+                        │   Problem Observed   │
+                        └──────────┬──────────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    ▼              ▼              ▼
+           ┌───────────┐  ┌──────────────┐  ┌──────────────┐
+           │ Can't      │  │ App returns  │  │ UI not       │
+           │ access any │  │ errors or    │  │ loading or   │
+           │ service    │  │ wrong data   │  │ blank page   │
+           └─────┬─────┘  └──────┬───────┘  └──────┬───────┘
+                 │               │                 │
+        ┌────────┼────────┐     │          Go to: #vaadin-ui
+        ▼        ▼        ▼     │
+    Docker?  Kind?   Pods?      │
+    #docker  #kind   #kubectl   ├──────────────┬──────────────┐
+                                ▼              ▼              ▼
+                         ┌───────────┐  ┌───────────┐  ┌──────────────┐
+                         │ Chat gives │  │ RAG gives │  │ API returns  │
+                         │ no response│  │ "I don't  │  │ 400/500      │
+                         │ or timeout │  │ have info" │  │ error code   │
+                         └─────┬─────┘  └─────┬─────┘  └──────┬───────┘
+                               │              │               │
+                         Go to:         Go to:          Go to:
+                         #ollama        #rag-no-results #rest-api
+                         #mcp-timeout   #rag-guardrails
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="health-endpoints">Health Endpoint Reference</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<table>
+  <tr>
+    <th>Endpoint</th>
+    <th>URL</th>
+    <th>Expected Response</th>
+    <th>What It Checks</th>
+  </tr>
+  <tr>
+    <td>Mousike Health</td>
+    <td><code>http://localhost:8080/actuator/health</code></td>
+    <td><code>{"status":"UP","components":{"db":{"status":"UP"}}}</code></td>
+    <td>App + PostgreSQL connection + disk space</td>
+  </tr>
+  <tr>
+    <td>Mousike Readiness</td>
+    <td><code>http://localhost:8080/actuator/health/readiness</code></td>
+    <td><code>{"status":"UP"}</code></td>
+    <td>Can the pod accept traffic?</td>
+  </tr>
+  <tr>
+    <td>Mousike Liveness</td>
+    <td><code>http://localhost:8080/actuator/health/liveness</code></td>
+    <td><code>{"status":"UP"}</code></td>
+    <td>Is the JVM process alive?</td>
+  </tr>
+  <tr>
+    <td>Mousike Prometheus</td>
+    <td><code>http://localhost:8080/actuator/prometheus</code></td>
+    <td>Prometheus text format with <code>jvm_memory_*</code> metrics</td>
+    <td>JVM metrics, Spring AI metrics, custom counters</td>
+  </tr>
+  <tr>
+    <td>Document Service Health</td>
+    <td><code>http://localhost:8091/actuator/health</code></td>
+    <td><code>{"status":"UP"}</code></td>
+    <td>App + PostgreSQL from doc-service side</td>
+  </tr>
+  <tr>
+    <td>Ollama API</td>
+    <td><code>http://localhost:11434/api/tags</code></td>
+    <td>JSON with <code>{"models":[...]}</code> listing llama3.2, nomic-embed-text</td>
+    <td>Ollama process is running and responding</td>
+  </tr>
+  <tr>
+    <td>Phoenix Health</td>
+    <td><code>http://localhost:6006/healthz</code></td>
+    <td>HTTP 200</td>
+    <td>Phoenix trace collector is alive</td>
+  </tr>
+  <tr>
+    <td>Grafana Health</td>
+    <td><code>http://localhost:3000/api/health</code></td>
+    <td><code>{"database":"ok"}</code></td>
+    <td>Grafana dashboard is responsive</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="docker-desktop">Docker Desktop Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Docker Desktop Not Running <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> <code>docker: command not found</code> or <code>Cannot connect to the Docker daemon</code></p>
+  <div class="compare">
+    <div class="compare-box expected">
+      <div class="compare-label">Expected</div>
+      <pre style="border:none;padding:0.3rem;margin:0;background:transparent">$ docker info
+Server Version: 27.x.x
+...</pre>
+    </div>
+    <div class="compare-box actual">
+      <div class="compare-label">Actual</div>
+      <pre style="border:none;padding:0.3rem;margin:0;background:transparent">$ docker info
+ERROR: Cannot connect to the Docker daemon at unix:///var/run/docker.sock.
+Is the docker daemon running?</pre>
+    </div>
+  </div>
+  <p><strong>Fix:</strong></p>
+  <ol class="steps">
+    <li>Open Docker Desktop application manually</li>
+    <li>Wait for the whale icon in the menu bar to stop animating</li>
+    <li>Verify: <code>docker info</code> should show server version</li>
+  </ol>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">Docker Desktop 500 Internal Server Error <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> <code>docker info</code> returns but <code>docker ps</code> gives <code>500 Internal Server Error</code>. Docker is in a zombie state.</p>
+  <pre>
+$ docker ps
+Error response from daemon: 500 Internal Server Error</pre>
+  <p><strong>Root Cause:</strong> Docker Desktop process crashed but socket file remains. Common after macOS sleep/wake cycles.</p>
+  <p><strong>Fix:</strong></p>
+  <pre>
+# Force quit Docker Desktop
+osascript -e 'quit app "Docker"' 2>/dev/null
+sleep 5
+pkill -f "Docker Desktop" 2>/dev/null
+
+# Wait 10 seconds, then restart
+open -a "Docker"
+
+# Wait for Docker to fully start (30-60 seconds)
+while ! docker info &>/dev/null; do sleep 3; done
+echo "Docker is ready"</pre>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">Docker Desktop Insufficient Resources <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> Pods stuck in <code>Pending</code> or OOMKilled. The Kind cluster needs at least <strong>11.25 GB memory</strong> total across all pods.</p>
+  <p><strong>Fix:</strong> Open Docker Desktop → Settings → Resources → Set Memory to at least <strong>12 GB</strong> and CPU to at least <strong>6 cores</strong>.</p>
+  <table>
+    <tr><th>Service</th><th>Memory Request</th><th>Memory Limit</th><th>CPU Request</th><th>CPU Limit</th></tr>
+    <tr><td>mousike-app</td><td>512Mi</td><td>1Gi</td><td>500m</td><td>1000m</td></tr>
+    <tr><td>document-service</td><td>512Mi</td><td>1Gi</td><td>-</td><td>-</td></tr>
+    <tr><td>postgres</td><td>512Mi</td><td>1Gi</td><td>250m</td><td>500m</td></tr>
+    <tr><td>redis</td><td>128Mi</td><td>256Mi</td><td>-</td><td>-</td></tr>
+    <tr><td>docling</td><td>2Gi</td><td><strong>4Gi</strong></td><td>1000m</td><td>2000m</td></tr>
+    <tr><td>phoenix</td><td>512Mi</td><td>1Gi</td><td>-</td><td>-</td></tr>
+    <tr><td>grafana-lgtm</td><td>1Gi</td><td>2Gi</td><td>500m</td><td>1000m</td></tr>
+    <tr><td><strong>TOTAL</strong></td><td><strong>5.2Gi</strong></td><td><strong>11.25Gi</strong></td><td><strong>2.25</strong></td><td><strong>4.5</strong></td></tr>
+  </table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="kind-cluster">Kind Cluster Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Kind Cluster Not Found <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> <code>kubectl</code> commands fail with <code>The connection to the server localhost:XXXX was refused</code></p>
+  <pre>
+# Check if cluster exists
+kind get clusters
+# Expected output: mousike-cluster
+
+# If missing, create it:
+kind create cluster --config k8s/kind-config.yaml
+
+# If cluster exists but kubectl can't connect:
+kind export kubeconfig --name mousike-cluster</pre>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">Kind Cluster Stale After Docker Restart <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> <code>kind get clusters</code> shows <code>mousike-cluster</code> but <code>kubectl get pods</code> fails.</p>
+  <p><strong>Root Cause:</strong> Docker Desktop restart loses container state. Kind nodes are Docker containers — they stop when Docker restarts.</p>
+  <pre>
+# Check node containers
+docker ps -a | grep kind
+
+# If nodes are stopped (Exited status):
+kind delete cluster --name mousike-cluster
+# Then recreate using start-stack.sh or manually</pre>
+</div>
+
+<div class="issue info">
+  <div class="issue-title">Kind Port Mapping Reference <span class="issue-label label-info">INFO</span></div>
+  <p>Kind maps NodePort services to host ports. If a service is unreachable, verify port mappings:</p>
+  <table>
+    <tr><th>Service</th><th>Pod Port</th><th>NodePort</th><th>Host Port</th><th>Test Command</th></tr>
+    <tr><td>mousike-app</td><td>8080</td><td>30080</td><td>8080</td><td><code>curl localhost:8080/actuator/health</code></td></tr>
+    <tr><td>document-service</td><td>8090</td><td>30090</td><td>8091</td><td><code>curl localhost:8091/actuator/health</code></td></tr>
+    <tr><td>Grafana</td><td>3000</td><td>30300</td><td>3000</td><td><code>curl localhost:3000/api/health</code></td></tr>
+    <tr><td>OTLP HTTP</td><td>4318</td><td>30418</td><td>4318</td><td>(internal only)</td></tr>
+    <tr><td>Phoenix</td><td>6006</td><td>30600</td><td>6006</td><td><code>curl localhost:6006/healthz</code></td></tr>
+  </table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="kubectl-pods">Kubernetes Pod Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Pod Stuck in Init:0/2 <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Pod shows <code>Init:0/2</code> and never becomes Ready.</p>
+  <p><strong>Root Cause:</strong> Init containers wait indefinitely for dependencies (postgres, redis, docling). If those services aren't running, the pod will never start.</p>
+  <pre>
+# See which init container is stuck
+kubectl describe pod &lt;pod-name&gt; -n rag | grep -A 5 "Init Containers"
+
+# Check init container logs
+kubectl logs &lt;pod-name&gt; -n rag -c wait-for-postgres
+kubectl logs &lt;pod-name&gt; -n rag -c wait-for-redis
+kubectl logs &lt;pod-name&gt; -n rag -c wait-for-docling</pre>
+
+  <h4>Init Container Dependencies</h4>
+  <table>
+    <tr><th>Pod</th><th>Waits For</th><th>Check Method</th><th>Typical Wait</th></tr>
+    <tr><td>mousike</td><td>postgres (TCP 5432), redis (TCP 6379)</td><td>netcat (<code>nc -z</code>)</td><td>30-60s</td></tr>
+    <tr><td>document-service</td><td>postgres (TCP 5432), docling (HTTP /health)</td><td>netcat + wget</td><td>60-300s (docling is slow)</td></tr>
+    <tr><td>ingester job</td><td>postgres, docling, redis</td><td>netcat + wget</td><td>60-300s</td></tr>
+  </table>
+  <p><strong>Fix:</strong> Ensure the dependency pods are running first. Docling is the slowest — it downloads ML models on first boot (up to 5 minutes).</p>
+</div>
+
+<div class="issue">
+  <div class="issue-title">Pod CrashLoopBackOff <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Pod keeps restarting, RESTARTS counter increasing.</p>
+  <pre>
+# Get the crash reason
+kubectl describe pod &lt;pod-name&gt; -n rag | grep -A 10 "Last State"
+
+# Check application logs from the last crash
+kubectl logs &lt;pod-name&gt; -n rag --previous
+
+# Common crash reasons:
+# 1. OOMKilled → Pod exceeded memory limit (check resource limits)
+# 2. Exit code 1 → Application startup error (check logs for stack trace)
+# 3. Exit code 137 → Killed by OOM killer or liveness probe</pre>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">Pod ImagePullBackOff <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> <code>STATUS: ImagePullBackOff</code> or <code>ErrImageNeverPull</code></p>
+  <p><strong>Root Cause:</strong> The Docker image wasn't loaded into the Kind cluster. All custom images use <code>imagePullPolicy: Never</code>.</p>
+  <pre>
+# Load images into Kind
+kind load docker-image mousike-app:latest --name mousike-cluster
+kind load docker-image document-service:latest --name mousike-cluster
+
+# Verify images are in Kind nodes
+docker exec -it mousike-cluster-control-plane crictl images | grep mousike</pre>
+</div>
+
+<div class="issue">
+  <div class="issue-title">Readiness Probe Failing (0/1 Ready) <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Pod is Running but shows <code>0/1</code> in READY column.</p>
+  <pre>
+# Check which probe is failing
+kubectl describe pod &lt;pod-name&gt; -n rag | grep -A 5 "Conditions"
+
+# Check probe events
+kubectl describe pod &lt;pod-name&gt; -n rag | grep "Unhealthy"
+
+# Common output:
+# Warning  Unhealthy  Readiness probe failed: HTTP probe failed with statuscode: 503</pre>
+
+  <h4>Readiness Probe Configuration</h4>
+  <table>
+    <tr><th>Pod</th><th>Probe Path</th><th>Initial Delay</th><th>Period</th><th>Failure Threshold</th><th>Max Wait</th></tr>
+    <tr><td>mousike</td><td>/actuator/health/readiness</td><td>30s</td><td>10s</td><td>6</td><td>90s</td></tr>
+    <tr><td>document-service</td><td>/actuator/health/readiness</td><td>20s</td><td>10s</td><td>3 (default)</td><td>50s</td></tr>
+    <tr><td>postgres</td><td>pg_isready -U mousike</td><td>15s</td><td>5s</td><td>6</td><td>45s</td></tr>
+    <tr><td>redis</td><td>redis-cli ping</td><td>5s</td><td>3s</td><td>3 (default)</td><td>14s</td></tr>
+    <tr><td>docling</td><td>/health</td><td>60s</td><td>15s</td><td><strong>20</strong></td><td><strong>360s (6 min!)</strong></td></tr>
+    <tr><td>phoenix</td><td>/healthz</td><td>15s</td><td>10s</td><td>3 (default)</td><td>45s</td></tr>
+    <tr><td>grafana</td><td>/api/health</td><td>20s</td><td>10s</td><td>3 (default)</td><td>50s</td></tr>
+  </table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="port-mapping">Port Mapping Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue warning">
+  <div class="issue-title">Connection Refused on Host Port <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> <code>curl: (7) Failed to connect to localhost port 8080: Connection refused</code></p>
+  <pre>
+# Step 1: Check if the Kind node is exposing the port
+docker port mousike-cluster-control-plane
+
+# Step 2: Check if the NodePort service exists
+kubectl get svc -n rag
+
+# Step 3: Check if pod is actually listening
+kubectl exec -it &lt;pod-name&gt; -n rag -- curl -s localhost:8080/actuator/health
+
+# Step 4: If pod is healthy but host can't reach it, recreate cluster
+# (Kind port mappings are set at cluster creation time only)
+kind delete cluster --name mousike-cluster
+kind create cluster --config k8s/kind-config.yaml</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="postgresql">PostgreSQL / PGVector Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Database Connection Refused <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Application logs show <code>PSQLException: Connection to localhost:5432 refused</code></p>
+  <div class="compare">
+    <div class="compare-box expected">
+      <div class="compare-label">Expected Health Response</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">{
+  "status": "UP",
+  "components": {
+    "db": {
+      "status": "UP",
+      "details": {
+        "database": "PostgreSQL",
+        "validationQuery": "isValid()"
+      }
+    }
+  }
+}</pre>
+    </div>
+    <div class="compare-box actual">
+      <div class="compare-label">Actual When DB is Down</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">{
+  "status": "DOWN",
+  "components": {
+    "db": {
+      "status": "DOWN",
+      "details": {
+        "error": "org.springframework...
+         CannotCreateTransactionException:
+         Could not open JPA
+         EntityManager..."
+      }
+    }
+  }
+}</pre>
+    </div>
+  </div>
+  <pre>
+# Check PostgreSQL pod status
+kubectl get pod postgres-0 -n rag
+kubectl logs postgres-0 -n rag
+
+# Verify pg_isready from inside the cluster
+kubectl exec postgres-0 -n rag -- pg_isready -U mousike -d mousike
+
+# Check if pgvector extension is installed
+kubectl exec postgres-0 -n rag -- psql -U mousike -c "SELECT extname FROM pg_extension;"
+# Expected: plpgsql, vector</pre>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">HikariCP Connection Pool Exhausted <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> Requests hang, then fail with <code>HikariPool-1 - Connection is not available, request timed out after 10000ms</code></p>
+  <p><strong>Root Cause:</strong> All 10 connections in the pool are in use (slow queries, connection leaks, or high concurrency).</p>
+  <p><strong>Configuration:</strong></p>
+  <pre>
+# From application.yml
+spring.datasource.hikari:
+  connection-timeout: 10000   # 10s wait for connection
+  maximum-pool-size: 10       # Max 10 simultaneous connections</pre>
+  <p><strong>Fix:</strong> Check for slow queries in PostgreSQL logs, or increase pool size if legitimate high load.</p>
+</div>
+
+<div class="issue">
+  <div class="issue-title">PGVector Dimension Mismatch <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Embedding insertion fails with <code>expected 768 dimensions, not XXX</code></p>
+  <p><strong>Root Cause:</strong> The <code>nomic-embed-text</code> model produces 768-dimensional vectors. If you switch models, the dimensions may differ.</p>
+  <pre>
+# Check current vector table dimensions
+kubectl exec postgres-0 -n rag -- psql -U mousike -c \
+  "SELECT column_name, udt_name FROM information_schema.columns WHERE table_name='vector_store';"
+
+# Configuration expects 768 dimensions:
+# spring.ai.vectorstore.pgvector.dimensions: 768
+
+# If dimension mismatch, you must drop and recreate the vector table:
+kubectl exec postgres-0 -n rag -- psql -U mousike -c "DROP TABLE IF EXISTS vector_store CASCADE;"
+# Then restart the app (ddl-auto: update will recreate it)</pre>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">Schema Auto-Update Failures <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Configuration:</strong> <code>spring.jpa.hibernate.ddl-auto: update</code></p>
+  <p>Hibernate's <code>update</code> mode can add columns/tables but <strong>cannot</strong>:</p>
+  <ul>
+    <li>Drop columns or tables</li>
+    <li>Change column types</li>
+    <li>Rename columns</li>
+    <li>Alter constraints</li>
+  </ul>
+  <p>If you change entity classes in incompatible ways, you must manually alter the database or drop/recreate.</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="redis">Redis Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue warning">
+  <div class="issue-title">Redis Connection Refused <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> mousike init container <code>wait-for-redis</code> loops forever.</p>
+  <pre>
+# Check Redis pod
+kubectl get pod -l app=redis -n rag
+kubectl logs -l app=redis -n rag
+
+# Test Redis connectivity from inside cluster
+kubectl exec -it &lt;redis-pod&gt; -n rag -- redis-cli ping
+# Expected: PONG
+
+# Check Redis config
+# Redis runs with: redis-server --save 60 1 --loglevel warning
+# This means it saves state every 60 seconds if 1+ key changed</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="vector-store">Vector Store Query Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue info">
+  <div class="issue-title">Search Returns Empty Results <span class="issue-label label-info">INFO</span></div>
+  <p><strong>Symptom:</strong> <code>GET /api/search?q=beethoven</code> returns <code>[]</code> even though documents were ingested.</p>
+  <p><strong>Root Causes:</strong></p>
+  <ul>
+    <li><strong>Similarity threshold too high:</strong> The search uses <code>similarityThreshold(0.6)</code>. If vectors are not close enough, results are filtered out.</li>
+    <li><strong>Documents not ingested:</strong> The ingestion job may not have run or may have failed.</li>
+    <li><strong>Category filter mismatch:</strong> If you pass <code>&category=wrong_category</code>, the filter expression returns nothing.</li>
+    <li><strong>Embedding model mismatch:</strong> Documents were embedded with a different model than queries.</li>
+  </ul>
+  <pre>
+# Check how many vectors are in the store
+kubectl exec postgres-0 -n rag -- psql -U mousike -c "SELECT count(*) FROM vector_store;"
+
+# Check document metadata
+kubectl exec postgres-0 -n rag -- psql -U mousike -c \
+  "SELECT metadata->>'category' as cat, count(*) FROM vector_store GROUP BY cat;"
+
+# Test raw similarity search
+kubectl exec postgres-0 -n rag -- psql -U mousike -c \
+  "SELECT content, metadata FROM vector_store LIMIT 5;"</pre>
+</div>
+
+<div class="issue info">
+  <div class="issue-title">Understanding Similarity Thresholds <span class="issue-label label-info">INFO</span></div>
+  <p>The system uses <strong>two different similarity thresholds</strong> in different contexts:</p>
+  <table>
+    <tr><th>Context</th><th>Threshold</th><th>Where Set</th><th>Purpose</th></tr>
+    <tr><td>Semantic Search API</td><td>0.60</td><td>SemanticSearchService.java</td><td>Filter results for /api/search endpoint</td></tr>
+    <tr><td>RAG Retrieval Gate</td><td>0.65</td><td>RagRetrievalGate.java</td><td>Gate check before LLM call — higher bar for RAG</td></tr>
+    <tr><td>ChatClient RAG Advisor</td><td>0.50</td><td>AiConfig.java</td><td>QuestionAnswerAdvisor default threshold</td></tr>
+  </table>
+  <p>If a query gets search results but RAG says "I don't have enough information", the results passed the 0.50 threshold but not the 0.65 gate.</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="ollama">Ollama Runtime Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Ollama Not Running <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Chat requests hang for 30 seconds then fail. <code>curl http://localhost:11434/api/tags</code> returns connection refused.</p>
+  <pre>
+# Check if Ollama process is running
+pgrep -fl ollama
+
+# Start Ollama (macOS)
+open -a "Ollama"
+
+# Start Ollama (Linux)
+ollama serve &
+
+# Verify it's responding
+curl -s http://localhost:11434/api/tags</pre>
+</div>
+
+<div class="issue">
+  <div class="issue-title">Model Not Downloaded <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Chat returns 500 error. Ollama logs show <code>model "llama3.2" not found</code>.</p>
+  <div class="compare">
+    <div class="compare-box expected">
+      <div class="compare-label">Expected: ollama list</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">NAME                    SIZE
+llama3.2:latest         2.0 GB
+nomic-embed-text:latest 274 MB</pre>
+    </div>
+    <div class="compare-box actual">
+      <div class="compare-label">Actual When Models Missing</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">NAME    SIZE
+(empty or missing models)</pre>
+    </div>
+  </div>
+  <pre>
+# Pull required models
+ollama pull llama3.2
+ollama pull nomic-embed-text
+
+# Verify models
+ollama list</pre>
+  <p><strong>Both models are required:</strong></p>
+  <table>
+    <tr><th>Model</th><th>Purpose</th><th>Used By</th><th>Size</th></tr>
+    <tr><td><code>llama3.2</code></td><td>Chat, classification, extraction, RAG generation</td><td>mousike-app (ChatClient)</td><td>~2 GB</td></tr>
+    <tr><td><code>nomic-embed-text</code></td><td>Text → 768-dim vector embeddings</td><td>Both apps (VectorStore)</td><td>~274 MB</td></tr>
+  </table>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">Ollama Unreachable from Kubernetes Pods <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> Ollama works on <code>localhost:11434</code> from the host, but pods can't reach it.</p>
+  <p><strong>Root Cause:</strong> Pods use <code>host.docker.internal:11434</code> to reach the host machine's Ollama. This DNS name is provided by Docker Desktop.</p>
+  <pre>
+# Verify from inside a pod
+kubectl exec -it &lt;mousike-pod&gt; -n rag -- curl -s http://host.docker.internal:11434/api/tags
+
+# If this fails, check:
+# 1. Is Docker Desktop's "Allow host networking" enabled?
+# 2. Is Ollama actually bound to 0.0.0.0 (not just 127.0.0.1)?
+
+# Check Ollama binding
+lsof -i :11434
+# Should show: ollama ... *:11434 (LISTEN)
+# NOT: ollama ... localhost:11434 (LISTEN)
+
+# Fix: Set OLLAMA_HOST before starting Ollama
+export OLLAMA_HOST=0.0.0.0:11434
+ollama serve</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="llm-models">Model Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue warning">
+  <div class="issue-title">LLM Response is Slow (>30 seconds) <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Root Causes:</strong></p>
+  <ul>
+    <li><strong>First request after model load:</strong> Ollama loads the model into memory on first use. This can take 10-30 seconds.</li>
+    <li><strong>Model unloaded:</strong> Ollama unloads models after inactivity. Subsequent requests re-load.</li>
+    <li><strong>Insufficient RAM:</strong> llama3.2 needs ~4GB RAM. If the system is swapping, it will be very slow.</li>
+    <li><strong>No GPU acceleration:</strong> CPU-only inference is 5-10x slower than GPU.</li>
+  </ul>
+  <p><strong>Configuration that affects speed:</strong></p>
+  <pre>
+# From application.yml
+spring.ai.ollama.chat.options:
+  temperature: 0.7     # Higher = more random, slightly slower
+  top-p: 0.9           # Nucleus sampling parameter
+  num-ctx: 4096        # Context window — larger = more memory needed</pre>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">LLM Output is Garbage / Wrong Format <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> Classification returns free text instead of structured JSON. Extraction returns incomplete data.</p>
+  <p><strong>Root Cause:</strong> Small local models (like llama3.2 at 3B parameters) are less reliable at structured output than large cloud models (GPT-4, Claude).</p>
+  <p><strong>Mitigation:</strong></p>
+  <ul>
+    <li>Lower <code>temperature</code> to <code>0.3</code> for structured tasks (classification, extraction)</li>
+    <li>The system includes output validation (OutputValidator) that checks grounding ratio — if below 30%, the response is rejected</li>
+    <li>Retry the request — local models have higher variance</li>
+  </ul>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="embeddings">Embedding Failures</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Embedding Model Not Responding <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Document ingestion fails. Search returns errors. <code>nomic-embed-text</code> calls timeout.</p>
+  <p><strong>Impact:</strong> Without embeddings, the <strong>entire RAG pipeline breaks</strong>. No document ingestion, no similarity search, no retrieval.</p>
+  <pre>
+# Test embedding model directly
+curl -s http://localhost:11434/api/embeddings -d '{
+  "model": "nomic-embed-text",
+  "prompt": "test embedding"
+}' | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Dimensions: {len(d[\"embedding\"])}')"
+
+# Expected: Dimensions: 768
+# If it fails: ollama pull nomic-embed-text</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="context-window">Context Window Limits</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue info">
+  <div class="issue-title">Context Window Overflow <span class="issue-label label-info">INFO</span></div>
+  <p><strong>Configuration:</strong> <code>num-ctx: 4096</code> tokens (roughly 3000 words)</p>
+  <p><strong>What counts toward the context window:</strong></p>
+  <ul>
+    <li>System prompt</li>
+    <li>Chat memory (up to 20 messages from the <code>MessageWindowChatMemory</code>)</li>
+    <li>Retrieved RAG documents (can be 5 chunks × 500+ words each)</li>
+    <li>The user's current question</li>
+    <li>The model's response</li>
+  </ul>
+  <p><strong>Symptom when exceeded:</strong> Ollama silently truncates the input. The model may "forget" earlier parts of the conversation or ignore retrieved documents.</p>
+  <p><strong>Mitigation:</strong></p>
+  <ul>
+    <li>Chat memory is windowed to 20 messages — older messages are automatically dropped</li>
+    <li>RAG retrieves max 5 documents (topK: 5) to limit context usage</li>
+    <li>If needed, increase <code>num-ctx</code> to 8192 (will use more memory)</li>
+  </ul>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="mcp-connection">MCP Connection Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">MCP Client Cannot Connect to Server <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Agentic RAG returns empty answer. Logs show <code>Connection refused</code> to <code>/mcp/sse</code>.</p>
+  <div class="compare">
+    <div class="compare-box expected">
+      <div class="compare-label">Expected MCP Flow</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">
+User Question
+  → mousike (MCP Client)
+    → Ollama (decides to call tool)
+      → MCP Client sends tool request
+        → document-service (MCP Server)
+          via HTTP+SSE at /mcp/sse
+            → PGVector query
+              → response back through chain
+</pre>
+    </div>
+    <div class="compare-box actual">
+      <div class="compare-label">When MCP Server is Down</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">
+User Question
+  → mousike (MCP Client)
+    → Ollama (decides to call tool)
+      → MCP Client sends tool request
+        ✗ Connection refused to :8090/mcp/sse
+          → 30s timeout
+            → Empty/error response
+</pre>
+    </div>
+  </div>
+  <pre>
+# Check if document-service MCP endpoint is accessible
+# From host:
+curl -s http://localhost:8091/actuator/health
+
+# From inside the mousike pod:
+kubectl exec -it &lt;mousike-pod&gt; -n rag -- \
+  curl -s http://document-service:8090/actuator/health
+
+# MCP configuration in mousike:
+# spring.ai.mcp.client.sse.connections.document-service.url: http://localhost:8090/mcp/sse
+# In K8s: http://document-service:8090/mcp/sse (overridden by DOCUMENT_SERVICE_URL)</pre>
+</div>
+
+<div class="issue info">
+  <div class="issue-title">MCP Protocol Detail <span class="issue-label label-info">INFO</span></div>
+  <p>MCP uses <strong>HTTP + Server-Sent Events (SSE)</strong> transport. The client opens an SSE connection to <code>/mcp/sse</code>, and the server pushes tool call results back through this channel.</p>
+  <p><strong>Configuration:</strong></p>
+  <pre>
+# Client side (mousike application.yml)
+spring.ai.mcp.client:
+  enabled: true
+  name: mousike-mcp-client
+  version: "1.0.0"
+  request-timeout: 30s       # ← Tool call timeout
+  type: SYNC                  # Synchronous mode
+  sse:
+    connections:
+      document-service:
+        url: http://localhost:8090/mcp/sse   # SSE endpoint
+
+# Server side (document-service application.yml)
+spring.ai.mcp.server:
+  enabled: true
+  name: document-service
+  version: "1.0.0"</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="mcp-tools">MCP Tool Call Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue warning">
+  <div class="issue-title">Tool Returns "No relevant music knowledge found" <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> Agentic RAG returns an answer like "I couldn't find relevant information" even though documents exist.</p>
+  <p><strong>Root Cause:</strong> The MCP tool <code>searchMusicKnowledge</code> performs a vector search with a minimum score filter. If the score is set too high or the query doesn't match, it returns no results.</p>
+  <p><strong>Available MCP Tools (registered by document-service):</strong></p>
+  <table>
+    <tr><th>Tool Name</th><th>Parameters</th><th>Returns</th><th>Failure Response</th></tr>
+    <tr>
+      <td><code>searchMusicKnowledge</code></td>
+      <td><code>query</code> (string), <code>topK</code> (int, default 5), <code>minScore</code> (double, default 0.5)</td>
+      <td>Matched document chunks with scores</td>
+      <td>"No relevant music knowledge found for query: X"</td>
+    </tr>
+    <tr>
+      <td><code>searchByCategory</code></td>
+      <td><code>query</code> (string), <code>category</code> (string), <code>topK</code> (int, default 5)</td>
+      <td>Category-filtered document chunks</td>
+      <td>"No results found for 'X' in category 'Y'"</td>
+    </tr>
+    <tr>
+      <td><code>listAvailableDocuments</code></td>
+      <td>(none)</td>
+      <td>Static list of available document categories</td>
+      <td>Never fails (returns static data)</td>
+    </tr>
+  </table>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">Ollama Doesn't Call MCP Tools <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> Agentic RAG gives a generic answer without using tools. The LLM answered from its training data instead of calling MCP tools.</p>
+  <p><strong>Root Cause:</strong> Small local models like llama3.2 are less reliable at function/tool calling compared to larger models. The model may not recognize when to use a tool.</p>
+  <p><strong>What to check:</strong></p>
+  <ul>
+    <li>Look at Phoenix traces — did the LLM's response include a tool call?</li>
+    <li>The system prompt should instruct the model to use tools for music-related questions</li>
+    <li>Try rephrasing the question to be more explicit about needing document search</li>
+  </ul>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="mcp-sse">SSE Transport Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue warning">
+  <div class="issue-title">SSE Connection Drops <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> Agentic RAG works intermittently — sometimes tools return results, sometimes they timeout.</p>
+  <p><strong>Root Cause:</strong> The SSE (Server-Sent Events) connection between MCP client and server can be interrupted by:</p>
+  <ul>
+    <li>Network timeouts (Kubernetes service mesh, DNS resolution delays)</li>
+    <li>Pod restarts during a request</li>
+    <li>Load balancer idle timeout (if any proxy is between services)</li>
+  </ul>
+  <p><strong>Debugging:</strong></p>
+  <pre>
+# Check if SSE endpoint is accessible
+curl -N -H "Accept: text/event-stream" http://localhost:8091/mcp/sse
+
+# Should see SSE events streaming (headers then event data)
+# Ctrl+C to stop
+
+# Check mousike logs for MCP errors
+kubectl logs -l app=mousike -n rag | grep -i "mcp\|sse\|tool"</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="mcp-timeout">MCP Timeouts</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">MCP Request Timeout (30s) <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Agentic RAG takes exactly 30 seconds then returns an error or empty response.</p>
+  <p><strong>Root Cause:</strong> The MCP client has a 30-second timeout (<code>spring.ai.mcp.client.request-timeout: 30s</code>). If the document-service takes longer (e.g., Ollama is slow at generating embeddings for the search query), the call times out.</p>
+  <p><strong>Chain of latency:</strong></p>
+  <pre>
+MCP Tool Call → document-service receives request
+  → VectorStore.similaritySearch()
+    → Ollama nomic-embed-text (embed the query)      ← Can be 5-10s on CPU
+    → PostgreSQL PGVector HNSW search                 ← Usually &lt;100ms
+  → Format results and return via SSE                 ← &lt;10ms
+
+Total: If embedding takes &gt;25s → timeout!</pre>
+  <p><strong>Fix:</strong> Ensure Ollama has the embedding model loaded. The first embedding call after model load is slowest.</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="rag-no-results">RAG: No Results / Empty Answers</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">RAG Returns "I don't have enough information" <span class="issue-label label-error">ERROR</span></div>
+  <p>This is the <strong>expected behavior</strong> of the anti-hallucination guardrails when the system cannot find relevant documents. But if it happens for questions that <em>should</em> have answers:</p>
+
+  <h4>Guardrail Pipeline (3-Layer Defense)</h4>
+  <div class="flowchart">
+User Question
+     │
+     ▼
+┌─────────────────────────────────────────────────┐
+│  LAYER 1: Retrieval Gate  (RagRetrievalGate)    │
+│                                                 │
+│  1. Search PGVector with threshold 0.65         │
+│  2. Check: candidates.isEmpty()?                │
+│     YES → Return: "I don't have enough info"    │
+│  3. Check: candidates.size() &lt; 2?               │
+│     YES → Return: "I don't have enough info"    │
+│     (Only 1 chunk = low confidence)             │
+│                                                 │
+│  PASS → Continue to LLM                         │
+└────────────────────┬────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────┐
+│  LAYER 2: System Prompt                         │
+│                                                 │
+│  LLM instructed: "If the provided context       │
+│  does not contain enough information to          │
+│  answer, say so. Never make up facts."           │
+│                                                 │
+│  LLM generates answer...                        │
+└────────────────────┬────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────┐
+│  LAYER 3: Output Validator  (OutputValidator)   │
+│                                                 │
+│  1. Check: response empty/null?                 │
+│     YES → Block: "Empty response from LLM"      │
+│  2. Check: retrieved chunks empty?              │
+│     YES → Block: "No retrieved chunks"           │
+│  3. Calculate grounding ratio:                  │
+│     groundedWords / contentWords                │
+│     Ratio &lt; 0.30? → Block: "Low grounding"      │
+│     (Words &lt;4 chars are skipped)                │
+│                                                 │
+│  PASS → Return answer to user                   │
+└─────────────────────────────────────────────────┘</div>
+
+  <p><strong>Diagnostic steps:</strong></p>
+  <ol class="steps">
+    <li>Check if documents are ingested: <code>kubectl exec postgres-0 -n rag -- psql -U mousike -c "SELECT count(*) FROM vector_store;"</code></li>
+    <li>Check if search returns results: <code>curl "http://localhost:8080/api/search?q=YOUR_QUERY&topK=5"</code></li>
+    <li>Check Phoenix traces to see which guardrail layer blocked the response</li>
+    <li>If search returns results but RAG doesn't, the similarity threshold (0.65 for RAG vs 0.60 for search) may be the difference</li>
+  </ol>
+</div>
+
+<div class="issue success">
+  <div class="issue-title">Guardrail Working Correctly: Out-of-Domain Query <span class="issue-label label-fix">EXPECTED</span></div>
+  <p><strong>Test:</strong> Ask about something not in the knowledge base (e.g., "What is the population of Tokyo?")</p>
+  <div class="compare">
+    <div class="compare-box expected">
+      <div class="compare-label">Expected Response (Guardrails Working)</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">{
+  "question": "What is the population of Tokyo?",
+  "answer": "I don't have enough information
+    in my knowledge base to answer that
+    question accurately. Please try
+    rephrasing your question or ask about
+    a different music topic.",
+  "mode": "naive"
+}</pre>
+    </div>
+    <div class="compare-box actual">
+      <div class="compare-label">BAD Response (Guardrails Failed!)</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">{
+  "question": "What is the population of Tokyo?",
+  "answer": "The population of Tokyo is
+    approximately 13.96 million people...",
+  "mode": "naive"
+}
+⚠ This means the LLM hallucinated!
+The guardrails should have blocked this.</pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="rag-hallucination">Hallucination Detection</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Output Validator: Low Grounding Ratio <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>What it means:</strong> The <code>OutputValidator</code> checks what percentage of the LLM's response words appear in the retrieved context. If less than 30% of words are grounded in the source material, the response is rejected.</p>
+  <p><strong>How grounding is calculated:</strong></p>
+  <pre>
+// OutputValidator.java (simplified)
+for each word in LLM_response:
+    if word.length >= 4:                    // Skip short words (a, the, is, etc.)
+        contentWords++
+        if word appears in retrieved_chunks:
+            groundedWords++
+
+groundingRatio = groundedWords / contentWords
+if groundingRatio < 0.30:
+    REJECT → "Low grounding ratio: 0.XX"</pre>
+  <p><strong>When this triggers incorrectly:</strong></p>
+  <ul>
+    <li>The LLM paraphrases the source material heavily (uses synonyms instead of exact words)</li>
+    <li>The LLM adds legitimate explanatory text that isn't in the source</li>
+    <li>The source material uses technical abbreviations but the LLM spells them out</li>
+  </ul>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="rag-guardrails">Guardrail Failures</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue warning">
+  <div class="issue-title">Guardrails Pass When They Shouldn't <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> The system answers questions with hallucinated data despite guardrails.</p>
+  <p><strong>Possible causes:</strong></p>
+  <ul>
+    <li><strong>Documents are too generic:</strong> If the vector store contains broad documents, the similarity search may return results even for off-topic queries (0.65 threshold met)</li>
+    <li><strong>Minimum chunk count met:</strong> The gate requires at least 2 chunks. If 2+ low-quality chunks match, the gate passes</li>
+    <li><strong>Grounding ratio is high enough:</strong> If the hallucinated answer happens to share many words with the context (e.g., common music terminology), the 30% threshold passes</li>
+  </ul>
+  <p><strong>Mitigation:</strong> Increase similarity threshold, increase minimum chunk count, or increase grounding ratio threshold.</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="rag-modes">RAG Mode-Specific Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue info">
+  <div class="issue-title">Comparing RAG Mode Behavior <span class="issue-label label-info">INFO</span></div>
+  <table>
+    <tr><th>Issue</th><th>Naive Mode</th><th>Advanced Mode</th><th>Agentic Mode</th></tr>
+    <tr>
+      <td>Empty answer</td>
+      <td>Guardrail blocked (normal)</td>
+      <td>Query rewrite produced bad query</td>
+      <td>MCP tool not called or timed out</td>
+    </tr>
+    <tr>
+      <td>Wrong answer</td>
+      <td>Low grounding not caught</td>
+      <td>Translation changed meaning</td>
+      <td>LLM ignored tool results</td>
+    </tr>
+    <tr>
+      <td>Slow response</td>
+      <td>Ollama loading model (~10s)</td>
+      <td>Multiple LLM calls (rewrite+generate)</td>
+      <td>MCP tool + Ollama = double latency</td>
+    </tr>
+    <tr>
+      <td>Error 500</td>
+      <td>PGVector query failed</td>
+      <td>Query rewrite LLM call failed</td>
+      <td>MCP connection refused (30s timeout)</td>
+    </tr>
+  </table>
+
+  <p><strong>Test each mode:</strong></p>
+  <pre>
+# Naive RAG
+curl -s -X POST "http://localhost:8080/api/rag/query?mode=naive" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is a symphony?"}' | python3 -m json.tool
+
+# Advanced RAG
+curl -s -X POST "http://localhost:8080/api/rag/query?mode=advanced" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is a symphony?"}' | python3 -m json.tool
+
+# Agentic RAG
+curl -s -X POST "http://localhost:8080/api/rag/query?mode=agentic" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is a symphony?"}' --max-time 60 | python3 -m json.tool</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="chat-memory">Chat Memory Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Chat Doesn't Remember Previous Messages <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> You tell the chatbot your name, then ask "What is my name?" and it doesn't know.</p>
+  <p><strong>Root Causes:</strong></p>
+  <ul>
+    <li><strong>Different conversationId:</strong> Each conversation is identified by a UUID. If you don't send the same <code>conversationId</code>, it's a new conversation.</li>
+    <li><strong>Memory window exceeded:</strong> Only the last 20 messages are kept. Older messages are dropped.</li>
+    <li><strong>Database failure:</strong> If PostgreSQL is down, memory operations fail (500 error).</li>
+  </ul>
+  <pre>
+# Test memory persistence
+# Step 1: Start a conversation
+CONV_ID=$(uuidgen)
+curl -s -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d "{\"message\":\"My name is TestBot\", \"conversationId\":\"$CONV_ID\"}" | python3 -m json.tool
+
+# Step 2: Ask about the name (same conversationId!)
+curl -s -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d "{\"message\":\"What is my name?\", \"conversationId\":\"$CONV_ID\"}" | python3 -m json.tool
+
+# Expected: Response should mention "TestBot"
+
+# Step 3: Clear memory
+curl -s -X DELETE "http://localhost:8080/api/chat/$CONV_ID"</pre>
+
+  <p><strong>Check memory table in database:</strong></p>
+  <pre>
+kubectl exec postgres-0 -n rag -- psql -U mousike -c \
+  "SELECT conversation_id, count(*) as msg_count FROM ai_chat_memory GROUP BY conversation_id;"</pre>
+</div>
+
+<div class="issue info">
+  <div class="issue-title">Chat Memory Schema Initialization <span class="issue-label label-info">INFO</span></div>
+  <p>The chat memory table <code>ai_chat_memory</code> is auto-created by Spring AI on startup (<code>initialize-schema: always</code>). If the table doesn't exist, check application logs for initialization errors.</p>
+  <pre>
+# Verify the table exists
+kubectl exec postgres-0 -n rag -- psql -U mousike -c \
+  "SELECT table_name FROM information_schema.tables WHERE table_name='ai_chat_memory';"</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="document-ingestion">Document Ingestion Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Ingestion Returns success: false <span class="issue-label label-error">ERROR</span></div>
+  <div class="compare">
+    <div class="compare-box expected">
+      <div class="compare-label">Expected Response</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">{
+  "filename": "music-theory.pdf",
+  "chunksIngested": 42,
+  "success": true,
+  "error": ""
+}</pre>
+    </div>
+    <div class="compare-box actual">
+      <div class="compare-label">Failed Response</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">{
+  "filename": "music-theory.pdf",
+  "chunksIngested": 0,
+  "success": false,
+  "error": "java.io.IOException:
+    File corrupted or unsupported format"
+}</pre>
+    </div>
+  </div>
+  <p><strong>Common failure reasons:</strong></p>
+  <ul>
+    <li><strong>Tika parsing failure:</strong> Corrupted PDF, encrypted document, or unsupported format</li>
+    <li><strong>Embedding model unavailable:</strong> Ollama's <code>nomic-embed-text</code> not responding — the vector store can't create embeddings</li>
+    <li><strong>PostgreSQL disk full:</strong> PGVector table can't accept new rows</li>
+    <li><strong>File too large:</strong> Exceeds the 50MB upload limit (<code>spring.servlet.multipart.max-file-size: 50MB</code>)</li>
+  </ul>
+
+  <h4>Ingestion Pipeline Steps</h4>
+  <div class="flowchart">
+File Upload (PDF/DOCX)
+     │
+     ▼
+┌─────────────────────┐
+│  TikaDocumentReader  │  ← Can fail: corrupted file, unsupported format
+│  (Apache Tika)       │
+└──────────┬──────────┘
+           │ Raw Documents
+           ▼
+┌─────────────────────┐
+│  Category Metadata   │  ← Adds metadata.category from request
+│  Enrichment          │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  TokenTextSplitter   │  ← Splits into chunks (default settings)
+│  (Spring AI)         │
+└──────────┬──────────┘
+           │ Chunks
+           ▼
+┌─────────────────────┐
+│  PGVector Store      │  ← Calls Ollama for embeddings
+│  vectorStore.accept()│  ← Stores vectors in PostgreSQL
+└──────────┬──────────┘   ← Can fail: Ollama timeout, DB full
+           │
+           ▼
+     IngestionResult
+  (filename, chunksIngested, success, errorMessage)</div>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">Ingestion Job (Kubernetes) Failed <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> <code>kubectl get jobs -n rag</code> shows the ingester job with <code>COMPLETIONS: 0/1</code></p>
+  <pre>
+# Check job status
+kubectl get jobs -n rag
+kubectl describe job ingester -n rag
+
+# Check pod logs from the job
+kubectl logs -l job-name=ingester -n rag
+
+# The job has backoffLimit: 3 — it retries up to 3 times on failure
+# After 3 failures, the job is marked as Failed
+
+# To re-run the job, delete and recreate:
+kubectl delete job ingester -n rag
+kubectl apply -f k8s/ingester/job.yaml</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="rest-api">REST API Error Reference</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h3>HTTP 400 Bad Request</h3>
+<div class="issue warning">
+  <div class="issue-title">Missing Required Field <span class="issue-label label-warn">WARNING</span></div>
+  <p>All POST endpoints validate required fields and return 400 with an error message:</p>
+  <table>
+    <tr><th>Endpoint</th><th>Required Field</th><th>Error Response</th></tr>
+    <tr><td><code>POST /api/chat</code></td><td><code>message</code></td><td><code>{"error": "message is required"}</code></td></tr>
+    <tr><td><code>POST /api/rag/query</code></td><td><code>question</code></td><td><code>{"error": "question is required"}</code></td></tr>
+    <tr><td><code>POST /api/classify</code></td><td><code>description</code></td><td><code>{"error": "description is required"}</code></td></tr>
+    <tr><td><code>POST /api/extract</code></td><td><code>text</code></td><td><code>{"error": "text is required"}</code></td></tr>
+  </table>
+</div>
+
+<h3>HTTP 500 Internal Server Error</h3>
+<div class="issue">
+  <div class="issue-title">Unhandled Exceptions <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Important:</strong> The application does <strong>not</strong> have a global exception handler (<code>@ControllerAdvice</code>). Unhandled exceptions produce generic Spring Boot 500 error pages.</p>
+  <p><strong>Common 500 error causes:</strong></p>
+  <table>
+    <tr><th>Error Source</th><th>Root Cause</th><th>What to Check</th></tr>
+    <tr><td><code>ChatClient.prompt().call()</code></td><td>Ollama unreachable or model error</td><td>Ollama status, model loaded</td></tr>
+    <tr><td><code>VectorStore.similaritySearch()</code></td><td>PostgreSQL down or PGVector error</td><td>Database health, vector table</td></tr>
+    <tr><td><code>ChatMemory</code> operations</td><td>PostgreSQL JDBC failure</td><td>Database connectivity, ai_chat_memory table</td></tr>
+    <tr><td>MCP tool call</td><td>document-service unreachable</td><td>MCP connection, document-service pod</td></tr>
+  </table>
+  <p><strong>To diagnose 500 errors, always check application logs:</strong></p>
+  <pre>
+kubectl logs -l app=mousike -n rag --tail=50
+kubectl logs -l app=document-service -n rag --tail=50</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="vaadin-ui">Vaadin UI Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Blank White Page <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Navigating to <code>http://localhost:8080</code> shows a blank page or loading spinner.</p>
+  <p><strong>Root Causes:</strong></p>
+  <ul>
+    <li><strong>App not built in production mode:</strong> Vaadin needs <code>-Pvaadin.productionMode=true</code> for the Kind deployment. Development mode requires a separate dev server.</li>
+    <li><strong>JavaScript bundle not generated:</strong> Check pod logs for Vaadin frontend compilation errors.</li>
+    <li><strong>Browser cache:</strong> Hard refresh with Ctrl+Shift+R</li>
+  </ul>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">Chat Response Stops Mid-Stream <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> The chat response starts appearing but stops partway through, leaving an incomplete message.</p>
+  <p><strong>Root Cause:</strong> The Vaadin ChatView uses reactive streaming (<code>Flux</code>) to display tokens as they arrive from Ollama. If the stream breaks mid-response:</p>
+  <ul>
+    <li>Ollama process crashed or ran out of memory</li>
+    <li>Network interruption between pod and Ollama</li>
+    <li>User navigated away (the <code>getUI()</code> returns empty, updates silently ignored)</li>
+  </ul>
+  <p><strong>Note:</strong> The ChatView does <strong>not</strong> have an error handler on the reactive stream. Errors are silently swallowed — no error message is shown to the user.</p>
+  <pre>
+// ChatView.java — no error handling on subscribe()
+chatService.chat(conversationId, message)
+    .doOnNext(token -> {
+        responseBuilder.append(token);
+        getUI().ifPresent(ui -> ui.access(() ->
+            responseBubble.setText(responseBuilder.toString())));
+    })
+    .subscribe();  // ← No .doOnError() handler!</pre>
+</div>
+
+<div class="issue info">
+  <div class="issue-title">Vaadin Views Reference <span class="issue-label label-info">INFO</span></div>
+  <table>
+    <tr><th>URL Path</th><th>View Class</th><th>Purpose</th></tr>
+    <tr><td><code>/chat</code></td><td>ChatView</td><td>LLM chat with JDBC memory</td></tr>
+    <tr><td><code>/search</code></td><td>SearchView</td><td>Semantic search UI</td></tr>
+    <tr><td><code>/composer</code></td><td>ComposerView</td><td>Composer data extraction</td></tr>
+    <tr><td><code>/monitor</code></td><td>MonitorView</td><td>System health dashboard</td></tr>
+  </table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="startup-failures">Application Startup Failures</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Application Fails to Start <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> Pod in CrashLoopBackOff. Logs show Spring Boot startup failure.</p>
+  <p><strong>Common startup errors:</strong></p>
+
+  <details class="accordion">
+    <summary>Database Connection Error</summary>
+    <div class="content">
+      <pre>
+org.postgresql.util.PSQLException: Connection to localhost:5432 refused.
+Check that the hostname and port are correct and that the postmaster is accepting connections.</pre>
+      <p><strong>Fix:</strong> Ensure PostgreSQL pod is running. In K8s, the init container should wait for it, but if the init container is misconfigured, the app may start before PostgreSQL is ready.</p>
+    </div>
+  </details>
+
+  <details class="accordion">
+    <summary>Chat Memory Schema Error</summary>
+    <div class="content">
+      <pre>
+org.springframework.jdbc.BadSqlGrammarException:
+  Table 'ai_chat_memory' doesn't exist</pre>
+      <p><strong>Fix:</strong> Verify <code>spring.ai.chat.memory.repository.jdbc.initialize-schema: always</code> is set. If using a custom schema, ensure the schema name matches.</p>
+    </div>
+  </details>
+
+  <details class="accordion">
+    <summary>PGVector Extension Missing</summary>
+    <div class="content">
+      <pre>
+org.postgresql.util.PSQLException: ERROR: type "vector" does not exist</pre>
+      <p><strong>Fix:</strong> The PostgreSQL image must be <code>ankane/pgvector:latest</code> (not regular <code>postgres</code>). Check: <code>kubectl exec postgres-0 -n rag -- psql -U mousike -c "CREATE EXTENSION IF NOT EXISTS vector;"</code></p>
+    </div>
+  </details>
+
+  <details class="accordion">
+    <summary>MCP Client Connection Error on Startup</summary>
+    <div class="content">
+      <pre>
+Failed to establish SSE connection to http://document-service:8090/mcp/sse</pre>
+      <p><strong>Fix:</strong> The document-service must be running before mousike starts. This is not enforced by init containers (mousike only waits for postgres and redis). If document-service is slow, restart mousike pod after document-service is ready.</p>
+    </div>
+  </details>
+
+  <details class="accordion">
+    <summary>Port Already In Use (Local Development)</summary>
+    <div class="content">
+      <pre>
+Web server failed to start. Port 8080 was already in use.</pre>
+      <p><strong>Fix:</strong> Another process (or Kind port forward) is using port 8080. Check: <code>lsof -i :8080</code></p>
+    </div>
+  </details>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="phoenix-traces">Phoenix Trace Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue warning">
+  <div class="issue-title">No Traces Appearing in Phoenix <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> Phoenix UI at <code>http://localhost:6006</code> shows no traces after making requests.</p>
+  <p><strong>Root Causes:</strong></p>
+  <ul>
+    <li><strong>OTLP exporter misconfigured:</strong> Check that <code>PHOENIX_OTLP_GRPC_URL</code> / <code>PHOENIX_OTLP_HTTP_URL</code> environment variables are correct</li>
+    <li><strong>Phoenix pod not ready:</strong> <code>kubectl get pod -l app=phoenix -n rag</code></li>
+    <li><strong>Exporter timeout:</strong> Both exporters have 10-second timeout. If Phoenix is slow, spans are dropped silently</li>
+    <li><strong>Observations not enabled:</strong> Verify <code>spring.ai.chat.observations.enabled: true</code></li>
+  </ul>
+  <pre>
+# Check Phoenix is running
+curl -s http://localhost:6006/healthz
+
+# Check mousike observability config
+kubectl exec -it &lt;mousike-pod&gt; -n rag -- env | grep PHOENIX
+
+# Expected:
+# PHOENIX_OTLP_HTTP_URL=http://phoenix-service:6006
+# PHOENIX_OTLP_GRPC_URL=http://phoenix-service:4317</pre>
+</div>
+
+<div class="issue info">
+  <div class="issue-title">Understanding Trace Structure <span class="issue-label label-info">INFO</span></div>
+  <p>Each AI operation creates a trace with spans. Here's what a healthy chat trace looks like in Phoenix:</p>
+  <pre>
+Trace: POST /api/chat
+├── ChatClient.call()                    [~5-30s]
+│   ├── ChatMemory.get()                 [~10ms]  ← Retrieve conversation history
+│   ├── OllamaChatModel.call()           [~3-25s] ← Main LLM inference
+│   │   └── HTTP POST /api/chat          [~3-25s] ← Actual Ollama API call
+│   └── ChatMemory.add()                 [~10ms]  ← Save new messages
+└── Response returned                     [&lt;1ms]
+
+For RAG operations:
+Trace: POST /api/rag/query?mode=naive
+├── VectorStore.similaritySearch()        [~500ms]
+│   └── OllamaEmbeddingModel.embed()     [~200ms] ← Embed the query
+│       └── HTTP POST /api/embeddings     [~200ms]
+├── RagRetrievalGate.evaluate()           [~1ms]
+├── ChatClient.call() with QA advisor     [~5-25s]
+│   └── OllamaChatModel.call()            [~5-25s]
+└── OutputValidator.validate()            [~1ms]</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="grafana-metrics">Grafana Metrics Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue warning">
+  <div class="issue-title">No Metrics in Grafana <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Symptom:</strong> Grafana dashboards show "No data" or metric queries return empty.</p>
+  <pre>
+# Check Grafana health
+curl -s http://localhost:3000/api/health
+# Expected: {"database":"ok"}
+
+# Check OTLP endpoint
+kubectl exec -it &lt;mousike-pod&gt; -n rag -- env | grep GRAFANA
+# Expected: GRAFANA_OTLP_HTTP_URL=http://grafana-lgtm-service:4318
+
+# Check Prometheus metrics are being generated
+curl -s http://localhost:8080/actuator/prometheus | head -20
+# Should see jvm_memory_*, http_server_*, gen_ai_client_* metrics
+
+# Verify Prometheus scraping annotations on mousike deployment
+kubectl get pod -l app=mousike -n rag -o jsonpath='{.items[0].metadata.annotations}'
+# Should include: prometheus.io/scrape: "true"</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="prometheus">Prometheus Metrics</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue info">
+  <div class="issue-title">Key Metrics to Monitor <span class="issue-label label-info">INFO</span></div>
+  <table>
+    <tr><th>Metric</th><th>What It Tells You</th><th>Alert Threshold</th></tr>
+    <tr><td><code>gen_ai_client_operation_seconds_count{error="none"}</code></td><td>Successful LLM calls</td><td>Should increase with usage</td></tr>
+    <tr><td><code>gen_ai_client_operation_seconds_count{error!="none"}</code></td><td>Failed LLM calls</td><td>Any value > 0 needs investigation</td></tr>
+    <tr><td><code>jvm_memory_used_bytes{area="heap"}</code></td><td>JVM heap usage</td><td>> 800MB approaching 1GB limit</td></tr>
+    <tr><td><code>hikaricp_connections_active</code></td><td>Active DB connections</td><td>> 8 out of 10 = pool stress</td></tr>
+    <tr><td><code>http_server_requests_seconds_count</code></td><td>HTTP request count by endpoint</td><td>Track for anomalies</td></tr>
+    <tr><td><code>http_server_requests_seconds_sum</code></td><td>Total request duration</td><td>Divide by count for avg latency</td></tr>
+  </table>
+  <pre>
+# Check AI operation metrics
+curl -s http://localhost:8080/actuator/prometheus | grep gen_ai_client
+
+# Check for errors in AI operations
+curl -s http://localhost:8080/actuator/prometheus | grep 'gen_ai_client.*error'
+
+# Check connection pool health
+curl -s http://localhost:8080/actuator/prometheus | grep hikaricp</pre>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="log-analysis">Log Analysis Guide</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue info">
+  <div class="issue-title">Log Format and Correlation <span class="issue-label label-info">INFO</span></div>
+  <p>All application logs include OpenTelemetry trace and span IDs for cross-service correlation:</p>
+  <pre>
+# Log format:
+# HH:mm:ss.SSS [thread] LEVEL logger - traceId=XXXXX spanId=YYYYY - message
+
+# Example:
+14:23:45.123 [http-nio-8080-exec-1] DEBUG ChatService - traceId=abc123 spanId=def456 - Processing chat message
+14:23:45.234 [http-nio-8080-exec-1] DEBUG AiConfig - traceId=abc123 spanId=ghi789 - Calling Ollama with 3 messages
+
+# To trace a request across services:
+# 1. Find the traceId from mousike logs
+# 2. Search document-service logs for the same traceId
+# 3. Find the trace in Phoenix UI using the same traceId</pre>
+
+  <h4>Useful Log Commands</h4>
+  <pre>
+# View mousike logs (last 100 lines)
+kubectl logs -l app=mousike -n rag --tail=100
+
+# View document-service logs
+kubectl logs -l app=document-service -n rag --tail=100
+
+# Follow logs in real-time
+kubectl logs -l app=mousike -n rag -f
+
+# Search for errors
+kubectl logs -l app=mousike -n rag | grep -i "error\|exception\|fail"
+
+# Search for a specific traceId across all pods
+kubectl logs --all-containers -n rag | grep "traceId=YOUR_TRACE_ID"
+
+# View previous container logs (after crash)
+kubectl logs &lt;pod-name&gt; -n rag --previous</pre>
+</div>
+
+<div class="issue info">
+  <div class="issue-title">Log Level Reference <span class="issue-label label-info">INFO</span></div>
+  <table>
+    <tr><th>Logger</th><th>Level</th><th>What It Logs</th></tr>
+    <tr><td><code>com.example.mousike</code></td><td>DEBUG</td><td>Application logic, RAG pipeline steps, guardrail decisions</td></tr>
+    <tr><td><code>org.springframework.ai</code></td><td>DEBUG</td><td>Spring AI internals: chat calls, embeddings, MCP messages</td></tr>
+    <tr><td>Root</td><td>INFO</td><td>Everything else: Spring Boot startup, Hibernate, HikariCP</td></tr>
+  </table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="e2e-tests">E2E Test Failure Guide</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue info">
+  <div class="issue-title">Understanding E2E Test Assertions <span class="issue-label label-info">INFO</span></div>
+  <p>Playwright E2E tests are in <code>e2e/tests/</code>. Here's what each test checks and what failures mean:</p>
+</div>
+
+<div class="issue">
+  <div class="issue-title">Health Check Tests Fail <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Test:</strong> <code>api/health.spec.ts</code></p>
+  <div class="compare">
+    <div class="compare-box expected">
+      <div class="compare-label">Expected</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">expect(res.status()).toBe(200)
+expect(body.status).toBe('UP')
+expect(body.components.db.status).toBe('UP')</pre>
+    </div>
+    <div class="compare-box actual">
+      <div class="compare-label">Failure Means</div>
+<pre style="border:none;padding:0.3rem;margin:0;background:transparent">status != 200  → App not running
+status != 'UP' → Component unhealthy
+db.status != 'UP' → PostgreSQL down</pre>
+    </div>
+  </div>
+</div>
+
+<div class="issue">
+  <div class="issue-title">Chat Memory Test Fails <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Test:</strong> <code>api/chat.spec.ts</code> — sends "My name is TestBot", then asks "What is my name?"</p>
+  <p><strong>Assertion:</strong> <code>expect(body.response.toLowerCase()).toContain('testbot')</code></p>
+  <p><strong>Failure means:</strong></p>
+  <ul>
+    <li>JDBC chat memory not persisting (database issue)</li>
+    <li>Ollama not following instructions (model quality issue)</li>
+    <li>Context window too small to include memory messages</li>
+  </ul>
+</div>
+
+<div class="issue">
+  <div class="issue-title">RAG Guardrail Test Fails <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Test:</strong> <code>full-stack/04-rag-pipeline.spec.ts</code> — asks "What is the population of Tokyo?"</p>
+  <p><strong>Assertion:</strong> <code>expect(body.answer).toContain("don't have enough information")</code></p>
+  <p><strong>Failure means:</strong> The guardrails failed to block an out-of-domain query — the system is <strong>hallucinating</strong>.</p>
+</div>
+
+<div class="issue">
+  <div class="issue-title">Observability Metrics Test Fails <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Test:</strong> <code>full-stack/07-observability-metrics.spec.ts</code></p>
+  <p><strong>Assertion:</strong> <code>gen_ai_client_operation_seconds_count{gen_ai_operation_name: 'chat', error: 'none'} > 0</code></p>
+  <p><strong>Failure means:</strong></p>
+  <ul>
+    <li>Spring AI auto-instrumentation disabled (<code>observations.enabled: false</code>)</li>
+    <li>No chat requests were made before the test ran</li>
+    <li>Prometheus metrics endpoint not exposed</li>
+  </ul>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">UI Tests Timeout <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Tests:</strong> <code>ui/chat.spec.ts</code>, <code>ui/navigation.spec.ts</code></p>
+  <p><strong>Timeouts:</strong></p>
+  <ul>
+    <li>Page load: 30 seconds</li>
+    <li>Element visibility: 15 seconds</li>
+    <li>LLM response wait: 10 seconds</li>
+    <li>Global test timeout: 120 seconds (with 1 retry)</li>
+  </ul>
+  <p><strong>If UI tests timeout:</strong> Usually means the app is not serving the Vaadin frontend (check if built in production mode).</p>
+</div>
+
+<h3>Running E2E Tests</h3>
+<pre>
+# Run all tests
+cd e2e && npx playwright test
+
+# Run only API tests (faster, no browser needed)
+npx playwright test --project=api
+
+# Run only UI tests
+npx playwright test --project=ui
+
+# Run a specific test file
+npx playwright test tests/api/health.spec.ts
+
+# Run with visible browser (for debugging)
+npx playwright test --project=ui --headed
+
+# Show HTML report after failure
+npx playwright show-report</pre>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="build-issues">Build Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Gradle Build Fails <span class="issue-label label-error">ERROR</span></div>
+  <pre>
+# Clean and rebuild
+./gradlew clean build
+
+# If Vaadin frontend compilation fails:
+./gradlew :mousike:vaadinClean :mousike:build
+
+# Build without tests (faster)
+./gradlew build -x test
+
+# Build Docker image (requires Docker running)
+./gradlew :mousike:bootBuildImage --imageName=mousike-app:latest -Pvaadin.productionMode=true</pre>
+</div>
+
+<div class="issue warning">
+  <div class="issue-title">bootBuildImage Takes Forever <span class="issue-label label-warn">WARNING</span></div>
+  <p><strong>Root Cause:</strong> Spring Boot's buildpack downloads layers on first build. Subsequent builds use cache.</p>
+  <p><strong>First build:</strong> 5-15 minutes. <strong>Subsequent builds:</strong> 1-3 minutes.</p>
+  <p><strong>If stuck at "Pulling builder image":</strong> Check Docker Hub rate limits. You may need to <code>docker login</code>.</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="image-loading">Image Loading Issues</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue">
+  <div class="issue-title">Images Not Found in Kind <span class="issue-label label-error">ERROR</span></div>
+  <p><strong>Symptom:</strong> <code>ErrImageNeverPull</code> or <code>ImagePullBackOff</code> after deploying.</p>
+  <p><strong>Root Cause:</strong> All custom images use <code>imagePullPolicy: Never</code> — they must be pre-loaded into Kind. Kind nodes are separate Docker environments; images on the host are NOT automatically available.</p>
+  <pre>
+# Step 1: Verify images exist locally
+docker images | grep -E "mousike-app|document-service"
+
+# Step 2: Load into Kind
+kind load docker-image mousike-app:latest --name mousike-cluster
+kind load docker-image document-service:latest --name mousike-cluster
+
+# Step 3: Verify images are in Kind
+docker exec mousike-cluster-control-plane crictl images | grep -E "mousike|document"
+
+# Step 4: Restart deployments to pick up new images
+kubectl rollout restart deployment/mousike -n rag
+kubectl rollout restart deployment/document-service -n rag</pre>
+  <p><strong>Common mistake:</strong> Using <code>--skip-build</code> with <code>start-stack.sh</code> after recreating the Kind cluster. The cluster is fresh but images weren't reloaded. The script handles this correctly, but if you're deploying manually, always run <code>kind load</code> after creating a new cluster.</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="complete-restart">Nuclear Option: Complete Restart</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="issue info">
+  <div class="issue-title">When Nothing Else Works <span class="issue-label label-info">INFO</span></div>
+  <p>If you've exhausted all other options, here's how to start completely fresh:</p>
+  <ol class="steps">
+    <li>Stop everything: <code>./scripts/stop-stack.sh --clean --yes</code></li>
+    <li>Verify Docker Desktop is running and healthy: <code>docker info</code></li>
+    <li>Verify Ollama is running: <code>curl http://localhost:11434/api/tags</code></li>
+    <li>Pull required models: <code>ollama pull llama3.2 && ollama pull nomic-embed-text</code></li>
+    <li>Start fresh: <code>./scripts/start-stack.sh</code></li>
+    <li>Wait for all sanity tests to pass (15/15)</li>
+    <li>Verify with: <code>kubectl get pods -n rag</code> — all should be 1/1 Running</li>
+  </ol>
+  <p><strong>Total time from clean start:</strong> 15-30 minutes (depending on network speed for image pulls and model downloads).</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>Critical Timeouts Summary</h2>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<table>
+  <tr><th>Component</th><th>Setting</th><th>Value</th><th>What Happens on Timeout</th></tr>
+  <tr><td>HikariCP</td><td>connection-timeout</td><td>10s</td><td>Request fails with "Connection not available"</td></tr>
+  <tr><td>MCP Client</td><td>request-timeout</td><td>30s</td><td>Tool call fails, agentic RAG returns empty</td></tr>
+  <tr><td>OTLP Exporter</td><td>export timeout</td><td>10s</td><td>Traces dropped silently (app continues)</td></tr>
+  <tr><td>K8s Readiness (mousike)</td><td>initialDelay + failures</td><td>90s max</td><td>Pod removed from service, no traffic</td></tr>
+  <tr><td>K8s Liveness (mousike)</td><td>initialDelay + period</td><td>60s+</td><td>Pod killed and restarted</td></tr>
+  <tr><td>K8s Readiness (docling)</td><td>initialDelay + failures</td><td><strong>360s</strong> (6 min)</td><td>Longest wait — ML model download</td></tr>
+  <tr><td>File Upload</td><td>max-file-size</td><td>50MB</td><td>400 Bad Request</td></tr>
+  <tr><td>Ollama Context</td><td>num-ctx</td><td>4096 tokens</td><td>Input silently truncated</td></tr>
+</table>
+
+<div style="margin-top:3rem; padding:1.5rem; border:1px solid var(--border); border-radius:8px; background:var(--bg2); text-align:center;">
+  <p style="color:var(--text2); margin:0;">
+    <a href="index.html" style="color:var(--blue); text-decoration:none; font-weight:600;">← Back to Diagram Index</a>
+    &nbsp;&bull;&nbsp;
+    <a href="comprehensive-guide.html" style="color:var(--blue); text-decoration:none; font-weight:600;">Comprehensive Guide →</a>
+  </p>
+</div>
+
+</div>
+</body>
+</html>
