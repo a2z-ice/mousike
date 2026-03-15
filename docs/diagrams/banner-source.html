@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 630px; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: #0d1117;
+    display: flex;
+    position: relative;
+  }
+
+  /* Subtle grid pattern */
+  .grid-bg {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(88,166,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(88,166,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Glowing orbs */
+  .orb {
+    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.3;
+  }
+  .orb-1 { width: 400px; height: 400px; background: #58a6ff; top: -100px; left: -50px; }
+  .orb-2 { width: 350px; height: 350px; background: #bc8cff; bottom: -80px; right: 100px; }
+  .orb-3 { width: 250px; height: 250px; background: #39d4e7; top: 50px; right: -30px; opacity: 0.2; }
+
+  /* Content */
+  .content {
+    position: relative; z-index: 2;
+    display: flex; width: 100%; padding: 50px 60px;
+    gap: 50px;
+  }
+
+  /* Left side — text */
+  .left {
+    flex: 1; display: flex; flex-direction: column; justify-content: center;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(88,166,255,0.12); border: 1px solid rgba(88,166,255,0.25);
+    border-radius: 20px; padding: 6px 16px; font-size: 13px; color: #58a6ff;
+    font-weight: 600; width: fit-content; margin-bottom: 20px; letter-spacing: 0.5px;
+  }
+  .badge .dot { width: 7px; height: 7px; background: #3fb950; border-radius: 50%; }
+  h1 {
+    font-size: 56px; color: #f0f6fc; font-weight: 700; line-height: 1.1;
+    margin-bottom: 16px; letter-spacing: -1px;
+  }
+  h1 span { color: #58a6ff; }
+  .tagline {
+    font-size: 20px; color: #8b949e; line-height: 1.5; margin-bottom: 28px;
+    max-width: 480px;
+  }
+  .tech-tags {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .tech-tag {
+    padding: 5px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .tag-spring { background: rgba(63,185,80,0.15); color: #3fb950; border: 1px solid rgba(63,185,80,0.25); }
+  .tag-ai { background: rgba(188,140,255,0.15); color: #bc8cff; border: 1px solid rgba(188,140,255,0.25); }
+  .tag-k8s { background: rgba(57,212,231,0.15); color: #39d4e7; border: 1px solid rgba(57,212,231,0.25); }
+  .tag-llm { background: rgba(210,153,34,0.15); color: #e3b341; border: 1px solid rgba(210,153,34,0.25); }
+
+  /* Right side — architecture diagram */
+  .right {
+    width: 420px; display: flex; align-items: center; justify-content: center;
+  }
+  .diagram {
+    position: relative; width: 380px; height: 480px;
+  }
+
+  /* Diagram nodes */
+  .node {
+    position: absolute; border-radius: 10px; padding: 10px 14px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; font-weight: 600; color: #f0f6fc;
+    border: 1px solid; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .node-icon {
+    width: 28px; height: 28px; border-radius: 6px; display: flex;
+    align-items: center; justify-content: center; font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .n-user { top: 0; left: 50%; transform: translateX(-50%); background: #161b22; border-color: #30363d; }
+  .n-user .node-icon { background: #30363d; }
+
+  .n-mousike { top: 80px; left: 20px; background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.35); }
+  .n-mousike .node-icon { background: rgba(63,185,80,0.25); }
+
+  .n-ollama { top: 80px; right: 20px; background: rgba(210,153,34,0.1); border-color: rgba(210,153,34,0.35); }
+  .n-ollama .node-icon { background: rgba(210,153,34,0.25); }
+
+  .n-mcp { top: 175px; left: 50%; transform: translateX(-50%); background: rgba(188,140,255,0.1); border-color: rgba(188,140,255,0.35); }
+  .n-mcp .node-icon { background: rgba(188,140,255,0.25); }
+
+  .n-docsvc { top: 260px; left: 10px; background: rgba(57,212,231,0.1); border-color: rgba(57,212,231,0.35); }
+  .n-docsvc .node-icon { background: rgba(57,212,231,0.25); }
+
+  .n-pg { top: 260px; right: 10px; background: rgba(88,166,255,0.1); border-color: rgba(88,166,255,0.35); }
+  .n-pg .node-icon { background: rgba(88,166,255,0.25); }
+
+  .n-phoenix { top: 355px; left: 30px; background: rgba(248,81,73,0.1); border-color: rgba(248,81,73,0.35); }
+  .n-phoenix .node-icon { background: rgba(248,81,73,0.25); }
+
+  .n-grafana { top: 355px; right: 30px; background: rgba(210,153,34,0.1); border-color: rgba(210,153,34,0.35); }
+  .n-grafana .node-icon { background: rgba(210,153,34,0.25); }
+
+  .n-k8s { bottom: 0; left: 50%; transform: translateX(-50%); background: rgba(57,212,231,0.08); border-color: rgba(57,212,231,0.25); font-size: 11px; color: #39d4e7; padding: 6px 18px; }
+
+  /* Connection lines via SVG */
+  .connections {
+    position: absolute; inset: 0; z-index: -1;
+  }
+  .connections line {
+    stroke: rgba(88,166,255,0.2); stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+  }
+  .connections .active { stroke: rgba(63,185,80,0.35); stroke-width: 2; stroke-dasharray: none; }
+
+  /* Data flow dots */
+  .flow-dot {
+    position: absolute; width: 6px; height: 6px; border-radius: 50%;
+    background: #58a6ff; box-shadow: 0 0 8px #58a6ff;
+  }
+  .fd1 { top: 55px; left: 50%; }
+  .fd2 { top: 125px; left: 30%; }
+  .fd3 { top: 125px; right: 30%; }
+  .fd4 { top: 215px; left: 40%; background: #bc8cff; box-shadow: 0 0 8px #bc8cff; }
+  .fd5 { top: 310px; left: 30%; background: #39d4e7; box-shadow: 0 0 8px #39d4e7; }
+  .fd6 { top: 310px; right: 30%; background: #58a6ff; box-shadow: 0 0 8px #58a6ff; }
+</style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <div class="content">
+    <div class="left">
+      <div class="badge"><span class="dot"></span> Spring AI + Ollama + MCP</div>
+      <h1>Mousike<br><span>Composer Assistant</span></h1>
+      <p class="tagline">Modular RAG architecture with anti-hallucination guardrails, MCP tool calling, and full observability — deployed on Kubernetes</p>
+      <div class="tech-tags">
+        <span class="tech-tag tag-spring">Spring Boot 4</span>
+        <span class="tech-tag tag-ai">Spring AI 2.0</span>
+        <span class="tech-tag tag-llm">Ollama LLM</span>
+        <span class="tech-tag tag-k8s">Kind K8s</span>
+        <span class="tech-tag tag-ai">PGVector</span>
+        <span class="tech-tag tag-spring">Vaadin 25</span>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="diagram">
+        <svg class="connections" viewBox="0 0 380 480">
+          <!-- User to Mousike -->
+          <line x1="190" y1="38" x2="100" y2="80" class="active"/>
+          <!-- User to Ollama -->
+          <line x1="190" y1="38" x2="290" y2="80"/>
+          <!-- Mousike to MCP -->
+          <line x1="100" y1="118" x2="190" y2="175" class="active"/>
+          <!-- Ollama to MCP -->
+          <line x1="290" y1="118" x2="190" y2="175"/>
+          <!-- MCP to DocSvc -->
+          <line x1="170" y1="213" x2="90" y2="260"/>
+          <!-- MCP to PG -->
+          <line x1="210" y1="213" x2="290" y2="260"/>
+          <!-- DocSvc to Phoenix -->
+          <line x1="90" y1="298" x2="90" y2="355"/>
+          <!-- PG to Grafana -->
+          <line x1="290" y1="298" x2="290" y2="355"/>
+        </svg>
+
+        <div class="node n-user">
+          <div class="node-icon">👤</div>
+          <span>User</span>
+        </div>
+        <div class="node n-mousike">
+          <div class="node-icon">🎵</div>
+          <span>Mousike App</span>
+        </div>
+        <div class="node n-ollama">
+          <div class="node-icon">🤖</div>
+          <span>Ollama LLM</span>
+        </div>
+        <div class="node n-mcp">
+          <div class="node-icon">🔗</div>
+          <span>MCP Protocol</span>
+        </div>
+        <div class="node n-docsvc">
+          <div class="node-icon">📄</div>
+          <span>Doc Service</span>
+        </div>
+        <div class="node n-pg">
+          <div class="node-icon">🗄</div>
+          <span>PGVector</span>
+        </div>
+        <div class="node n-phoenix">
+          <div class="node-icon">🔥</div>
+          <span>Phoenix</span>
+        </div>
+        <div class="node n-grafana">
+          <div class="node-icon">📊</div>
+          <span>Grafana</span>
+        </div>
+        <div class="node n-k8s">Kind Kubernetes Cluster</div>
+
+        <div class="flow-dot fd1"></div>
+        <div class="flow-dot fd2"></div>
+        <div class="flow-dot fd3"></div>
+        <div class="flow-dot fd4"></div>
+        <div class="flow-dot fd5"></div>
+        <div class="flow-dot fd6"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
