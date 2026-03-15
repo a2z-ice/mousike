@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mousike — Comprehensive Technical Guide</title>
+<style>
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --bg3: #1c2129;
+    --border: #30363d; --text: #c9d1d9; --text2: #8b949e;
+    --heading: #f0f6fc; --accent: #58a6ff; --green: #3fb950;
+    --orange: #d29922; --red: #f85149; --purple: #bc8cff;
+    --pink: #f778ba;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.7; font-size: 16px;
+  }
+
+  /* --- Layout --- */
+  .page-wrapper { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 300px; min-width: 300px;
+    background: var(--bg2); border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem; position: sticky; top: 0; height: 100vh;
+    overflow-y: auto; font-size: 0.9rem;
+  }
+  .sidebar h2 { color: var(--accent); font-size: 1rem; margin-bottom: 1rem; }
+  .sidebar a {
+    display: block; color: var(--text2); text-decoration: none;
+    padding: 4px 8px; border-radius: 4px; margin-bottom: 2px;
+  }
+  .sidebar a:hover { color: var(--heading); background: var(--bg3); }
+  .sidebar .section-title {
+    color: var(--orange); font-weight: 600; font-size: 0.8rem;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-top: 1rem; margin-bottom: 0.3rem; padding: 0 8px;
+  }
+  .content { flex: 1; max-width: 1000px; padding: 2rem 3rem; }
+
+  /* --- Typography --- */
+  h1 { color: var(--heading); font-size: 2.2rem; margin-bottom: 0.5rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; }
+  h2 { color: var(--heading); font-size: 1.6rem; margin: 2.5rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+  h3 { color: var(--accent); font-size: 1.2rem; margin: 1.8rem 0 0.8rem; }
+  h4 { color: var(--orange); font-size: 1rem; margin: 1.2rem 0 0.5rem; }
+  p { margin-bottom: 1rem; }
+  ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+  li { margin-bottom: 0.3rem; }
+  a { color: var(--accent); }
+  strong { color: var(--heading); }
+  em { color: var(--orange); font-style: normal; }
+
+  /* --- Code --- */
+  code {
+    background: var(--bg2); padding: 2px 6px; border-radius: 4px;
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em;
+    color: var(--pink);
+  }
+  pre {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1rem 1.2rem; overflow-x: auto;
+    margin: 0.8rem 0 1.2rem; line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; color: var(--text); }
+
+  /* --- Boxes --- */
+  .info-box, .warn-box, .concept-box, .example-box {
+    border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0 1.5rem;
+    border-left: 4px solid;
+  }
+  .info-box { background: #0d2237; border-color: var(--accent); }
+  .warn-box { background: #2b1d0e; border-color: var(--orange); }
+  .concept-box { background: #1a0d2e; border-color: var(--purple); }
+  .example-box { background: #0d2818; border-color: var(--green); }
+  .box-title { font-weight: 700; margin-bottom: 0.4rem; }
+  .info-box .box-title { color: var(--accent); }
+  .warn-box .box-title { color: var(--orange); }
+  .concept-box .box-title { color: var(--purple); }
+  .example-box .box-title { color: var(--green); }
+
+  /* --- Tables --- */
+  table {
+    width: 100%; border-collapse: collapse;
+    margin: 0.8rem 0 1.2rem; font-size: 0.95rem;
+  }
+  th { background: var(--bg3); color: var(--heading); text-align: left; font-weight: 600; }
+  th, td { padding: 8px 12px; border: 1px solid var(--border); }
+  tr:nth-child(even) { background: var(--bg2); }
+
+  /* --- Diagrams --- */
+  .diagram {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.5rem; margin: 1rem 0 1.5rem;
+    font-family: 'SF Mono', monospace; font-size: 0.85rem;
+    line-height: 1.6; overflow-x: auto; white-space: pre;
+  }
+  .diagram .highlight { color: var(--accent); font-weight: 700; }
+  .diagram .green { color: var(--green); }
+  .diagram .orange { color: var(--orange); }
+  .diagram .pink { color: var(--pink); }
+  .diagram .purple { color: var(--purple); }
+
+  /* --- Screenshots --- */
+  .screenshot {
+    border: 1px solid var(--border); border-radius: 8px;
+    margin: 1rem 0 1.5rem; overflow: hidden;
+  }
+  .screenshot img { width: 100%; display: block; }
+  .screenshot-caption {
+    background: var(--bg3); padding: 8px 12px;
+    font-size: 0.85rem; color: var(--text2); text-align: center;
+  }
+
+  /* --- Flow steps --- */
+  .flow-step {
+    display: flex; gap: 1rem; margin: 0.8rem 0;
+    align-items: flex-start;
+  }
+  .step-num {
+    background: var(--accent); color: var(--bg);
+    width: 28px; height: 28px; min-width: 28px;
+    border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-weight: 700; font-size: 0.85rem;
+  }
+  .step-content { flex: 1; }
+
+  /* --- Comparison cards --- */
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  .compare-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1rem;
+  }
+  .compare-card h4 { margin-top: 0; }
+
+  /* --- Test checklist --- */
+  .test-group { margin: 1rem 0 1.5rem; }
+  .test-item {
+    display: flex; gap: 0.8rem; padding: 6px 0;
+    border-bottom: 1px solid var(--border); align-items: flex-start;
+  }
+  .test-id { color: var(--accent); font-family: monospace; min-width: 50px; font-weight: 600; }
+  .test-desc { flex: 1; }
+  .test-expect { color: var(--green); font-size: 0.9rem; }
+  .test-cmd { color: var(--text2); font-size: 0.85rem; font-family: monospace; }
+
+  /* --- Back to top --- */
+  .back-top {
+    position: fixed; bottom: 2rem; right: 2rem;
+    background: var(--accent); color: var(--bg); width: 40px; height: 40px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    text-decoration: none; font-size: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .content { padding: 1.5rem; }
+    .compare-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+
+<!-- ==================== SIDEBAR ==================== -->
+<nav class="sidebar">
+  <h2>Mousike Guide</h2>
+  <a href="index.html">Back to Diagrams Index</a>
+  <div class="section-title">Introduction</div>
+  <a href="#what-is-mousike">What is Mousike?</a>
+  <a href="#problem-solved">Problem Being Solved</a>
+  <a href="#big-picture">Big Picture Architecture</a>
+
+  <div class="section-title">Core Concepts</div>
+  <a href="#what-is-llm">What is an LLM?</a>
+  <a href="#what-is-rag">What is RAG?</a>
+  <a href="#what-is-mcp">What is MCP?</a>
+  <a href="#what-is-vector-db">What is a Vector Database?</a>
+  <a href="#what-is-embedding">What are Embeddings?</a>
+
+  <div class="section-title">Models & Tools</div>
+  <a href="#ollama-models">Ollama & Models Used</a>
+  <a href="#model-alternatives">Alternative Models & Solutions</a>
+  <a href="#mcp-deep-dive">MCP Deep Dive</a>
+
+  <div class="section-title">Architecture</div>
+  <a href="#two-apps">The Two Applications</a>
+  <a href="#mousike-app">Mousike App (Main)</a>
+  <a href="#document-service">Document Service (MCP Server)</a>
+  <a href="#kubernetes">Kubernetes Infrastructure</a>
+  <a href="#data-flow">Data Flows</a>
+
+  <div class="section-title">Deep Dives</div>
+  <a href="#rag-modes">Three RAG Modes</a>
+  <a href="#guardrails">Anti-Hallucination Guardrails</a>
+  <a href="#chat-memory">Chat Memory System</a>
+  <a href="#ingestion">Document Ingestion Pipeline</a>
+  <a href="#observability">Observability Stack</a>
+  <a href="#vaadin-ui">Vaadin UI</a>
+  <a href="#rest-api">REST API Reference</a>
+
+  <div class="section-title">Testing</div>
+  <a href="#test-setup">Test Setup</a>
+  <a href="#test-infrastructure">Infrastructure Tests</a>
+  <a href="#test-api">API Tests</a>
+  <a href="#test-rag">RAG Pipeline Tests</a>
+  <a href="#test-ui">UI Tests</a>
+  <a href="#test-observability">Observability Tests</a>
+  <a href="#test-edge-cases">Edge Case Tests</a>
+</nav>
+
+<!-- ==================== CONTENT ==================== -->
+<main class="content">
+
+<!-- ============================================================ -->
+<h1 id="what-is-mousike">Mousike - Comprehensive Technical Guide</h1>
+<!-- ============================================================ -->
+
+<p><strong>Mousike</strong> (Greek: <em>mousike</em>, meaning "music") is a <strong>composer assistant application</strong> that uses AI to answer questions about music, composers, instruments, and music theory. It combines a Large Language Model (LLM) with a knowledge base of music documents, so the AI can give accurate, source-backed answers instead of making things up.</p>
+
+<div class="info-box">
+  <div class="box-title">Who is this guide for?</div>
+  This guide is written for developers who are <strong>new to LLMs, RAG, MCP, and vector databases</strong>. Every concept is explained from scratch. You don't need prior AI/ML knowledge &mdash; just basic familiarity with web applications, REST APIs, and databases.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problem-solved">The Problem Being Solved</h2>
+<!-- ============================================================ -->
+
+<h3>The Hallucination Problem</h3>
+<p>Large Language Models (like ChatGPT, Claude, Llama) are powerful but have a fundamental flaw: they <strong>confidently make things up</strong>. This is called "hallucination." Ask an LLM "When was Beethoven born?" and it will likely answer correctly. But ask "What did the music theorist Johann Fux write about counterpoint in chapter 7 of Gradus ad Parnassum?" and the LLM might fabricate a plausible-sounding but completely wrong answer.</p>
+
+<h3>The Solution: RAG (Retrieval-Augmented Generation)</h3>
+<p>Instead of relying solely on the LLM's training data, we:</p>
+<ol>
+  <li><strong>Store trusted documents</strong> (PDFs about music theory, composer biographies, etc.) in a searchable database</li>
+  <li><strong>When a user asks a question</strong>, first search the database for relevant passages</li>
+  <li><strong>Give those passages to the LLM</strong> as context: "Here is what our documents say. Based on this, answer the user's question."</li>
+  <li><strong>Validate the output</strong> to ensure the LLM actually used the provided context</li>
+</ol>
+
+<p>This way, the LLM acts as a <strong>summarizer of real documents</strong> rather than generating answers from its own (potentially wrong) memory.</p>
+
+<h3>What Mousike Adds Beyond Basic RAG</h3>
+<ul>
+  <li><strong>Three RAG modes</strong> (Naive, Advanced, Agentic) so you can compare approaches</li>
+  <li><strong>3-layer anti-hallucination guardrails</strong> that block the LLM if no relevant documents are found</li>
+  <li><strong>MCP (Model Context Protocol)</strong> for tool-calling architecture &mdash; the LLM decides which tools to use</li>
+  <li><strong>Full observability</strong> with traces for every LLM call (Phoenix + Grafana)</li>
+  <li><strong>Production-like deployment</strong> on Kubernetes (Kind cluster)</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="big-picture">Big Picture Architecture</h2>
+<!-- ============================================================ -->
+
+<div class="diagram"><span class="highlight">USER</span>
+  |
+  | (browser)
+  v
+<span class="green">+---------------------------+</span>     <span class="orange">+-------------------------+</span>
+<span class="green">|    MOUSIKE APP (8080)     |</span>     <span class="orange">|  DOCUMENT SERVICE (8090)|</span>
+<span class="green">|                           |</span>     <span class="orange">|                         |</span>
+<span class="green">| Vaadin UI (Chat/Search)   |</span>     <span class="orange">| MCP Server (/mcp/sse)   |</span>
+<span class="green">| REST API (/api/*)         |</span>     <span class="orange">| MusicKnowledgeTools     |</span>
+<span class="green">| RAG Services (3 modes)    |</span>---->|<span class="orange"> searchMusicKnowledge()  |</span>
+<span class="green">| Guardrails (3 layers)     |</span> MCP <span class="orange">| searchByCategory()      |</span>
+<span class="green">| Chat Memory (JDBC)        |</span>     <span class="orange">| Ingestion Pipeline      |</span>
+<span class="green">+---------------------------+</span>     <span class="orange">+-------------------------+</span>
+      |           |                         |
+      |           |                         |
+      v           v                         v
+<span class="purple">+----------+</span>  <span class="pink">+---------+</span>        <span class="purple">+-----------+</span>
+<span class="purple">|PostgreSQL|</span>  <span class="pink">| Ollama  |</span>        <span class="purple">| PostgreSQL|</span>  (same DB)
+<span class="purple">|+ pgvector|</span>  <span class="pink">| llama3.2|</span>        <span class="purple">| + pgvector|</span>
+<span class="purple">+----------+</span>  <span class="pink">+---------+</span>        <span class="purple">+-----------+</span>
+  vectors       LLM on host           vectors
+  + memory      :11434                 + metadata
+      |
+      v
+<span class="orange">+----------+</span>  <span class="green">+-----------+</span>
+<span class="orange">| Phoenix  |</span>  <span class="green">|  Grafana  |</span>
+<span class="orange">| (traces) |</span>  <span class="green">| (metrics) |</span>
+<span class="orange">| :6006    |</span>  <span class="green">| :3000     |</span>
+<span class="orange">+----------+</span>  <span class="green">+-----------+</span>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="what-is-llm">Core Concept: What is an LLM?</h2>
+<!-- ============================================================ -->
+
+<div class="concept-box">
+  <div class="box-title">LLM = Large Language Model</div>
+  <p>A neural network trained on massive amounts of text that can understand and generate human-like text. Think of it as a very sophisticated autocomplete that can write paragraphs, answer questions, and follow instructions.</p>
+</div>
+
+<p><strong>How it works in Mousike:</strong></p>
+<ul>
+  <li>Mousike uses <strong>Ollama</strong> to run an LLM <em>locally on your machine</em> (no cloud API, no API keys)</li>
+  <li>The specific model is <code>llama3.2</code> &mdash; Meta's open-source 3B parameter model</li>
+  <li>The LLM runs on the <strong>host machine</strong> (not inside Kubernetes) at <code>localhost:11434</code></li>
+  <li>Kubernetes pods reach it via <code>host.docker.internal:11434</code></li>
+</ul>
+
+<h3>Why Ollama Instead of OpenAI/Claude API?</h3>
+<table>
+  <tr><th>Aspect</th><th>Ollama (Local)</th><th>Cloud API (OpenAI/Claude)</th></tr>
+  <tr><td>Cost</td><td>Free (runs on your hardware)</td><td>Pay per token ($)</td></tr>
+  <tr><td>Privacy</td><td>Data never leaves your machine</td><td>Data sent to cloud</td></tr>
+  <tr><td>Latency</td><td>No network round-trip</td><td>Network latency + queue</td></tr>
+  <tr><td>Quality</td><td>Smaller models, less capable</td><td>Larger, more capable</td></tr>
+  <tr><td>Setup</td><td>Install Ollama + pull model</td><td>Get API key</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="what-is-rag">Core Concept: What is RAG?</h2>
+<!-- ============================================================ -->
+
+<div class="concept-box">
+  <div class="box-title">RAG = Retrieval-Augmented Generation</div>
+  <p>A pattern where you <strong>retrieve relevant documents first</strong>, then <strong>generate an answer</strong> using those documents as context for the LLM. This grounds the LLM's response in actual data instead of its training memory.</p>
+</div>
+
+<p><strong>The RAG pipeline in simple steps:</strong></p>
+
+<div class="flow-step">
+  <div class="step-num">1</div>
+  <div class="step-content"><strong>User asks:</strong> "What scales did Bach commonly use?"</div>
+</div>
+<div class="flow-step">
+  <div class="step-num">2</div>
+  <div class="step-content"><strong>Embed the question:</strong> Convert the text into a 768-number vector (using <code>nomic-embed-text</code> model)</div>
+</div>
+<div class="flow-step">
+  <div class="step-num">3</div>
+  <div class="step-content"><strong>Search the vector database:</strong> Find document chunks whose vectors are closest to the question vector (cosine similarity)</div>
+</div>
+<div class="flow-step">
+  <div class="step-num">4</div>
+  <div class="step-content"><strong>Check guardrails:</strong> Are there enough relevant results? Is the confidence high enough?</div>
+</div>
+<div class="flow-step">
+  <div class="step-num">5</div>
+  <div class="step-content"><strong>Prompt the LLM:</strong> "Based on these document excerpts, answer the user's question: [excerpts] [question]"</div>
+</div>
+<div class="flow-step">
+  <div class="step-num">6</div>
+  <div class="step-content"><strong>Validate output:</strong> Check that the LLM's answer is grounded in the retrieved documents (>=30% word overlap)</div>
+</div>
+<div class="flow-step">
+  <div class="step-num">7</div>
+  <div class="step-content"><strong>Return answer</strong> to the user (or "I don't have enough information" if guardrails block it)</div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="what-is-mcp">Core Concept: What is MCP?</h2>
+<!-- ============================================================ -->
+
+<div class="concept-box">
+  <div class="box-title">MCP = Model Context Protocol</div>
+  <p>An open protocol (created by Anthropic) that lets LLMs <strong>call external tools</strong> in a standardized way. Instead of hardcoding what the LLM can do, you register "tools" that the LLM can discover and invoke when it decides they're useful.</p>
+</div>
+
+<h3>The Problem MCP Solves</h3>
+<p>Without MCP, connecting an LLM to external data requires tight coupling:</p>
+<pre><code>// Without MCP: You decide when to search
+String context = vectorStore.search(question);  // YOU control this
+String answer = llm.generate(context + question);</code></pre>
+
+<p>With MCP, the <strong>LLM decides</strong> when to use tools:</p>
+<pre><code>// With MCP: The LLM decides when to search
+// LLM sees: "I have these tools: searchMusicKnowledge, searchByCategory"
+// LLM thinks: "This question is about Bach. I should search for Bach."
+// LLM calls: searchMusicKnowledge(query="Bach scales", topK=5)
+// Tool returns results, LLM generates answer from them</code></pre>
+
+<h3>How MCP Works in Mousike</h3>
+<div class="diagram"><span class="green">MOUSIKE APP</span> (MCP Client)              <span class="orange">DOCUMENT SERVICE</span> (MCP Server)
+     |                                          |
+     |  1. LLM receives user question           |
+     |  2. LLM decides to call a tool           |
+     |                                          |
+     |  -------- HTTP POST /mcp/sse --------->  |
+     |  {method: "tools/call",                  |
+     |   params: {                              |
+     |     name: "searchMusicKnowledge",        |
+     |     arguments: {query: "Bach", topK: 5}  |
+     |   }}                                     |
+     |                                          |
+     |                              3. Server executes tool
+     |                              4. Vector search in PGVector
+     |                              5. Returns formatted results
+     |                                          |
+     |  <--- SSE response with tool result ---  |
+     |                                          |
+     |  6. LLM processes results                |
+     |  7. LLM generates final answer           |
+     |</div>
+
+<h3>MCP vs. Traditional Function Calling</h3>
+<div class="compare-grid">
+  <div class="compare-card">
+    <h4>Traditional Function Calling</h4>
+    <ul>
+      <li>Tools defined inline with the LLM prompt</li>
+      <li>Tied to specific LLM provider's format</li>
+      <li>Tools live in the same application</li>
+      <li>No standard protocol</li>
+    </ul>
+  </div>
+  <div class="compare-card">
+    <h4>MCP (Model Context Protocol)</h4>
+    <ul>
+      <li>Tools registered on a separate server</li>
+      <li>Provider-agnostic standard protocol</li>
+      <li>Tools can be in different services/languages</li>
+      <li>SSE-based real-time communication</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="what-is-vector-db">Core Concept: What is a Vector Database?</h2>
+<!-- ============================================================ -->
+
+<div class="concept-box">
+  <div class="box-title">Vector Database = A database that stores and searches by meaning</div>
+  <p>Traditional databases search by exact keywords ("WHERE title = 'Bach'"). A vector database converts text into numbers (vectors) and finds texts with <strong>similar meaning</strong>, even if they use different words.</p>
+</div>
+
+<p><strong>In Mousike:</strong> PostgreSQL with the <code>pgvector</code> extension serves as the vector database.</p>
+
+<table>
+  <tr><th>Setting</th><th>Value</th><th>Why</th></tr>
+  <tr><td>Index Type</td><td>HNSW</td><td>Fast approximate nearest neighbor search</td></tr>
+  <tr><td>Distance</td><td>COSINE_DISTANCE</td><td>Measures angle between vectors (direction similarity)</td></tr>
+  <tr><td>Dimensions</td><td>768</td><td>Each text chunk becomes a 768-number vector</td></tr>
+  <tr><td>Table</td><td><code>vector_store</code></td><td>Where all document chunks are stored</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="what-is-embedding">Core Concept: What are Embeddings?</h2>
+<!-- ============================================================ -->
+
+<div class="concept-box">
+  <div class="box-title">Embedding = Converting text to a list of numbers</div>
+  <p>An embedding model reads text and outputs a fixed-size list of numbers (vector) that captures the <strong>meaning</strong> of the text. Similar texts produce similar vectors.</p>
+</div>
+
+<pre><code>"Bach wrote fugues"     → [0.12, -0.45, 0.78, ..., 0.33]  (768 numbers)
+"Fugues by Bach"        → [0.11, -0.44, 0.79, ..., 0.34]  (very similar!)
+"Pizza recipe"          → [0.89, 0.23, -0.56, ..., -0.12]  (very different)</code></pre>
+
+<p><strong>In Mousike:</strong> The <code>nomic-embed-text</code> model (running in Ollama) creates these embeddings. It produces 768-dimensional vectors. When you search, your query is also embedded, and PGVector finds the document chunks with the most similar vectors.</p>
+
+<!-- ============================================================ -->
+<h2 id="ollama-models">Ollama & The Models Used</h2>
+<!-- ============================================================ -->
+
+<div class="screenshot">
+  <img src="screenshots/ollama-models.png" alt="Ollama API showing available models">
+  <div class="screenshot-caption">Ollama API at localhost:11434 showing downloaded models</div>
+</div>
+
+<h3>Two Models, Two Purposes</h3>
+<table>
+  <tr><th>Model</th><th>Purpose</th><th>What It Does</th><th>Size</th></tr>
+  <tr>
+    <td><code>llama3.2</code></td>
+    <td><strong>Chat / Generation</strong></td>
+    <td>Understands questions, follows instructions, generates human-like answers, decides when to call tools</td>
+    <td>~2GB (3B params)</td>
+  </tr>
+  <tr>
+    <td><code>nomic-embed-text</code></td>
+    <td><strong>Embeddings</strong></td>
+    <td>Converts text into 768-dimensional vectors for semantic search. Does NOT generate text.</td>
+    <td>~274MB</td>
+  </tr>
+</table>
+
+<div class="warn-box">
+  <div class="box-title">Important: These are different types of models</div>
+  <p><code>llama3.2</code> is a <strong>generative</strong> model (it produces text). <code>nomic-embed-text</code> is an <strong>embedding</strong> model (it produces numbers). You cannot use one for the other's job. The chat model cannot create good embeddings, and the embedding model cannot write sentences.</p>
+</div>
+
+<h3>How Ollama Works</h3>
+<p>Ollama is a local LLM runner. It downloads model weights and runs inference on your machine's CPU/GPU.</p>
+<pre><code># Install Ollama (macOS)
+brew install ollama
+
+# Pull the models (one-time download)
+ollama pull llama3.2        # ~2GB download
+ollama pull nomic-embed-text # ~274MB download
+
+# Ollama runs as a server at localhost:11434
+# Spring AI connects to it via HTTP API</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="model-alternatives">Alternative Models & Solutions</h2>
+<!-- ============================================================ -->
+
+<h3>Alternative Chat Models (drop-in replacements for llama3.2)</h3>
+<table>
+  <tr><th>Model</th><th>Size</th><th>Pros</th><th>Cons</th></tr>
+  <tr><td><code>mistral</code></td><td>7B</td><td>Better reasoning, great for RAG</td><td>Needs more RAM (~4GB)</td></tr>
+  <tr><td><code>phi3</code></td><td>3.8B</td><td>Microsoft model, good at instructions</td><td>Less creative</td></tr>
+  <tr><td><code>gemma2</code></td><td>9B</td><td>Google model, strong coding</td><td>Needs GPU for speed</td></tr>
+  <tr><td><code>qwen2.5</code></td><td>7B</td><td>Excellent multilingual support</td><td>Larger download</td></tr>
+  <tr><td>OpenAI GPT-4o</td><td>Cloud</td><td>Best quality, multimodal</td><td>Costs $, data leaves machine</td></tr>
+  <tr><td>Anthropic Claude</td><td>Cloud</td><td>Best at following instructions</td><td>Costs $, data leaves machine</td></tr>
+</table>
+
+<h3>Alternative Embedding Models (replace nomic-embed-text)</h3>
+<table>
+  <tr><th>Model</th><th>Dimensions</th><th>Notes</th></tr>
+  <tr><td><code>mxbai-embed-large</code></td><td>1024</td><td>Higher quality, larger vectors</td></tr>
+  <tr><td><code>all-minilm</code></td><td>384</td><td>Smaller, faster, less accurate</td></tr>
+  <tr><td>OpenAI <code>text-embedding-3-small</code></td><td>1536</td><td>Cloud API, very high quality</td></tr>
+</table>
+
+<h3>Alternative to Entire Stack</h3>
+<table>
+  <tr><th>Component</th><th>Mousike Uses</th><th>Alternatives</th></tr>
+  <tr><td>LLM Runtime</td><td>Ollama</td><td>vLLM, llama.cpp, LM Studio, HuggingFace TGI</td></tr>
+  <tr><td>Vector Store</td><td>PGVector</td><td>Pinecone, Weaviate, Qdrant, Milvus, Chroma</td></tr>
+  <tr><td>AI Framework</td><td>Spring AI</td><td>LangChain (Python), LlamaIndex, Haystack</td></tr>
+  <tr><td>Tool Protocol</td><td>MCP</td><td>LangChain Tools, OpenAI Functions, custom REST</td></tr>
+  <tr><td>Observability</td><td>Phoenix + Grafana</td><td>LangSmith, Weights &amp; Biases, Helicone</td></tr>
+  <tr><td>Document Parser</td><td>Tika</td><td>Docling, Unstructured, PyMuPDF</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="mcp-deep-dive">MCP Deep Dive</h2>
+<!-- ============================================================ -->
+
+<h3>The Three MCP Tools in Mousike</h3>
+
+<div class="example-box">
+  <div class="box-title">Tool 1: searchMusicKnowledge</div>
+  <p><strong>Purpose:</strong> General semantic search across all music knowledge</p>
+  <p><strong>Parameters:</strong> <code>query</code> (string), <code>topK</code> (int, default 5), <code>minScore</code> (double, default 0.65)</p>
+  <p><strong>What it does:</strong> Embeds the query, searches PGVector with COSINE_DISTANCE, returns formatted text with source references</p>
+  <p><strong>Example:</strong> LLM calls <code>searchMusicKnowledge("Bach fugue techniques", 5, 0.65)</code> and gets back relevant passages from music theory PDFs</p>
+</div>
+
+<div class="example-box">
+  <div class="box-title">Tool 2: searchByCategory</div>
+  <p><strong>Purpose:</strong> Search within a specific category (composers, instruments, theory, history, genres, techniques)</p>
+  <p><strong>Parameters:</strong> <code>query</code> (string), <code>category</code> (string)</p>
+  <p><strong>What it does:</strong> Same as searchMusicKnowledge but adds a metadata filter: <code>WHERE category = ?</code></p>
+  <p><strong>Example:</strong> LLM calls <code>searchByCategory("violin construction", "instruments")</code> to search only instrument-related documents</p>
+</div>
+
+<div class="example-box">
+  <div class="box-title">Tool 3: listAvailableDocuments</div>
+  <p><strong>Purpose:</strong> Tell the LLM what knowledge sources exist</p>
+  <p><strong>Parameters:</strong> none</p>
+  <p><strong>What it does:</strong> Returns a static list of available document sources and their topics</p>
+  <p><strong>Example:</strong> LLM calls this first to understand what topics it can search for</p>
+</div>
+
+<h3>MCP Protocol Flow (JSON-RPC over HTTP+SSE)</h3>
+<pre><code>// 1. Client discovers available tools
+POST /mcp/sse → {"jsonrpc": "2.0", "method": "tools/list"}
+Response: [{name: "searchMusicKnowledge", description: "...", inputSchema: {...}}, ...]
+
+// 2. LLM decides to call a tool
+POST /mcp/sse → {
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "searchMusicKnowledge",
+    "arguments": {"query": "Bach fugue", "topK": 5, "minScore": 0.65}
+  }
+}
+
+// 3. Server executes and returns result via SSE stream
+Response: {
+  "result": {
+    "content": [{
+      "type": "text",
+      "text": "[Source: music-theory.pdf, Score: 0.89]\nBach's fugues..."
+    }]
+  }
+}</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="two-apps">The Two Applications</h2>
+<!-- ============================================================ -->
+
+<div class="diagram"><span class="green">MOUSIKE APP</span> (port 8080)                  <span class="orange">DOCUMENT SERVICE</span> (port 8090/8091)
+<span class="green">========================</span>                  <span class="orange">============================</span>
+Role: <span class="highlight">MCP Client</span>                          Role: <span class="highlight">MCP Server</span>
+User-facing application                    Backend knowledge service
+
+<span class="green">Features:</span>                                  <span class="orange">Features:</span>
+- Vaadin Web UI (4 views)                  - MCP tool endpoint (/mcp/sse)
+- REST API (/api/*)                        - 3 @Tool methods for search
+- Chat with JDBC memory                    - Document ingestion pipeline
+- 3 RAG modes                              - Tika PDF/DOCX parsing
+- Classification &amp; extraction             - Vector store operations
+- Guardrails (anti-hallucination)
+
+<span class="green">Connects to:</span>                               <span class="orange">Connects to:</span>
+- Ollama (chat + embeddings)               - Ollama (embeddings only)
+- PostgreSQL (memory + vectors)            - PostgreSQL (vectors + metadata)
+- Document Service (MCP)                   - Docling (document parsing)
+- Phoenix + Grafana (traces)               - Phoenix (traces)
+</div>
+
+<!-- ============================================================ -->
+<h2 id="mousike-app">Mousike App &mdash; Component Breakdown</h2>
+<!-- ============================================================ -->
+
+<div class="screenshot">
+  <img src="screenshots/chat-view.png" alt="Chat View">
+  <div class="screenshot-caption">Chat View - The main conversational interface</div>
+</div>
+
+<h3>Package Structure</h3>
+<pre><code>com.example.mousike/
+  MouseikeApplication.java        ← Spring Boot entry point
+
+  config/
+    AiConfig.java                  ← ChatClient beans, JDBC memory, RAG client
+    McpClientConfig.java           ← Agentic ChatClient with MCP tools
+    ObservabilityConfig.java       ← Dual OTLP exporters (Phoenix + Grafana)
+    RedisConfig.java               ← Placeholder (Redis not used for memory)
+
+  guardrails/
+    RetrievalResult.java           ← Record: hasData, lowConfidence, documents
+    RagRetrievalGate.java          ← Layer 1: Score threshold (0.65) + min chunks (2)
+    OutputValidator.java           ← Layer 3: Grounding ratio check (30%)
+
+  rag/
+    NaiveRagService.java           ← Simple: embed → search → generate
+    AdvancedRagService.java        ← Better: higher topK, stricter thresholds
+    AgenticRagService.java         ← LLM-driven: MCP tool calling
+    RagController.java             ← POST /api/rag/query?mode=naive|advanced|agentic
+
+  chat/
+    ChatService.java               ← Streaming + sync chat with JDBC memory
+    ChatController.java            ← POST /api/chat, /api/chat/stream, DELETE
+
+  classification/
+    InstrumentClassifier.java      ← LLM classifies instruments into categories
+    ClassificationController.java  ← POST /api/classify
+
+  extraction/
+    ComposerExtractor.java         ← LLM extracts structured JSON from text
+    ExtractionController.java      ← POST /api/extract
+
+  semantic/
+    SemanticSearchService.java     ← Vector similarity search with filters
+    SemanticSearchController.java  ← GET /api/search?q=...&amp;category=...
+
+  ui/
+    MainLayout.java                ← Vaadin navigation shell (sidebar + header)
+    ChatView.java                  ← /chat - streaming chat interface
+    SearchView.java                ← /search - semantic search + results grid
+    ComposerView.java              ← /composer - text extraction demo
+    MonitorView.java               ← /monitor - links to Phoenix/Grafana
+
+  domain/
+    Composer.java                  ← JPA entity (name, era, biography)
+    Instrument.java                ← JPA entity (name, category, description)
+    Recital.java                   ← JPA entity (title, venue, date, composer FK)
+
+  repository/
+    ComposerRepository.java        ← findByNameContaining, findByEra
+    InstrumentRepository.java      ← findByCategory, findByNameContaining
+    RecitalRepository.java         ← JpaRepository (basic CRUD)</code></pre>
+
+<h3>Key Configuration Beans</h3>
+
+<h4>AiConfig.java &mdash; The Heart of the AI Setup</h4>
+<pre><code>// 1. JDBC-based chat memory (stores conversation history in PostgreSQL)
+@Bean
+JdbcChatMemoryRepository chatMemoryRepository(DataSource ds) {
+    return JdbcChatMemoryRepository.builder().dataSource(ds).build();
+}
+
+// 2. Windowed memory (keeps last 20 messages per conversation)
+@Bean
+ChatMemory chatMemory(JdbcChatMemoryRepository repo) {
+    return MessageWindowChatMemory.builder()
+        .chatMemoryRepository(repo)
+        .maxMessages(20)
+        .build();
+}
+
+// 3. Default chat client (for general conversation)
+@Bean
+ChatClient chatClient(ChatModel model, ChatMemory memory) {
+    return ChatClient.builder(model)
+        .defaultSystem("You are Mousike, a music knowledge assistant...")
+        .defaultAdvisors(MessageChatMemoryAdvisor.builder(memory).build())
+        .build();
+}
+
+// 4. RAG-specific chat client (stricter system prompt + vector search advisor)
+@Bean("ragChatClient")
+ChatClient ragChatClient(ChatModel model, VectorStore vs, ChatMemory memory) {
+    return ChatClient.builder(model)
+        .defaultSystem("Answer ONLY from provided context. If unsure, say so.")
+        .defaultAdvisors(
+            MessageChatMemoryAdvisor.builder(memory).build(),
+            new QuestionAnswerAdvisor(vs, SearchRequest.builder()
+                .similarityThreshold(0.50).topK(5).build()))
+        .build();
+}</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="document-service">Document Service &mdash; MCP Server</h2>
+<!-- ============================================================ -->
+
+<h3>Package Structure</h3>
+<pre><code>com.example.mousike/
+  DocumentServiceApplication.java  ← @SpringBootApplication + @EnableAsync
+
+  config/
+    McpServerConfig.java            ← Registers MusicKnowledgeTools as MCP tools
+    ObservabilityConfig.java        ← OTLP gRPC exporter for Phoenix
+
+  tools/
+    MusicKnowledgeTools.java        ← 3 @Tool methods (the MCP tools)
+
+  ingestion/
+    DocumentIngestionService.java   ← ETL: Tika → TokenTextSplitter → PGVector
+    IngestionStartupRunner.java     ← @Profile("ingestion") auto-loads docs at boot
+    IngestionController.java        ← REST: POST /api/ingest, GET /api/documents
+
+  domain/
+    DocumentMetadata.java           ← JPA entity tracking ingested files</code></pre>
+
+<h3>Document Ingestion Pipeline (ETL)</h3>
+<div class="diagram"><span class="highlight">PDF/DOCX File</span>
+    |
+    v
+<span class="green">Step 1: PARSE</span> (TikaDocumentReader)
+    Apache Tika extracts raw text from PDF/DOCX
+    Output: List&lt;Document&gt; with text content
+    |
+    v
+<span class="green">Step 2: ENRICH</span> (Add metadata)
+    Add: source=filename, category=composers|theory|..., ingested_at=timestamp
+    Output: Documents with rich metadata
+    |
+    v
+<span class="green">Step 3: SPLIT</span> (TokenTextSplitter)
+    Split long documents into overlapping chunks (~800 tokens each)
+    Preserves semantic boundaries (paragraphs, sentences)
+    Output: Many smaller Document chunks
+    |
+    v
+<span class="green">Step 4: EMBED + STORE</span> (VectorStore.accept)
+    Each chunk → Ollama nomic-embed-text → 768-dim vector
+    Store in PostgreSQL pgvector table (vector_store)
+    Output: Searchable vector embeddings in database
+    |
+    v
+<span class="orange">DocumentMetadata</span> entity created
+    Tracks: filename, chunkCount, status=COMPLETED
+</div>
+
+<!-- ============================================================ -->
+<h2 id="kubernetes">Kubernetes Infrastructure</h2>
+<!-- ============================================================ -->
+
+<h3>All Services in the Kind Cluster (namespace: rag)</h3>
+<table>
+  <tr><th>Service</th><th>Image</th><th>Internal Port</th><th>External Port</th><th>Purpose</th></tr>
+  <tr><td><strong>mousike</strong></td><td>mousike-app:latest</td><td>8080</td><td>localhost:8080</td><td>Main app (UI + API + RAG)</td></tr>
+  <tr><td><strong>document-service</strong></td><td>document-service:latest</td><td>8090</td><td>localhost:8091</td><td>MCP Server (tools + ingestion)</td></tr>
+  <tr><td><strong>postgres</strong></td><td>ankane/pgvector:latest</td><td>5432</td><td>(internal only)</td><td>PostgreSQL + pgvector extension</td></tr>
+  <tr><td><strong>redis</strong></td><td>redis:7-alpine</td><td>6379</td><td>(internal only)</td><td>Cache (currently placeholder)</td></tr>
+  <tr><td><strong>docling</strong></td><td>docling-serve:latest</td><td>5001</td><td>(internal only)</td><td>Document parsing (PDF→text)</td></tr>
+  <tr><td><strong>phoenix</strong></td><td>arizephoenix/phoenix</td><td>6006</td><td>localhost:6006</td><td>LLM trace viewer</td></tr>
+  <tr><td><strong>grafana-lgtm</strong></td><td>grafana/otel-lgtm</td><td>3000</td><td>localhost:3000</td><td>Metrics/Logs/Traces dashboard</td></tr>
+</table>
+
+<div class="info-box">
+  <div class="box-title">Why Kind (Kubernetes in Docker)?</div>
+  <p>Kind creates a full Kubernetes cluster <em>inside Docker containers</em> on your local machine. This gives you a production-like environment (pods, services, deployments, config maps, secrets) without needing a cloud cluster. The <code>extraPortMappings</code> in kind-config.yaml expose services to <code>localhost</code>.</p>
+</div>
+
+<h3>Startup Dependency Order</h3>
+<div class="diagram">1. <span class="highlight">Kind Cluster</span> + Namespace "rag"
+2. <span class="highlight">ConfigMap</span> (rag-config) + <span class="highlight">Secret</span> (rag-secrets)
+3. <span class="purple">Infrastructure</span> (parallel):
+   ├── PostgreSQL (StatefulSet, waits for pg_isready)
+   ├── Redis (Deployment)
+   ├── Docling (slow: ML model download, up to 5 min)
+   ├── Phoenix (OTLP gRPC receiver)
+   └── Grafana LGTM (OTLP HTTP receiver + Prometheus + UI)
+4. <span class="green">Applications</span> (after infra ready):
+   ├── document-service (init: wait-for-postgres, wait-for-docling)
+   └── mousike (init: wait-for-postgres, wait-for-redis)
+5. <span class="orange">[Optional]</span> document-ingester Job (loads PDFs into PGVector)
+</div>
+
+<!-- ============================================================ -->
+<h2 id="data-flow">Data Flows</h2>
+<!-- ============================================================ -->
+
+<h3>Flow 1: User Sends a Chat Message</h3>
+<div class="diagram">Browser (ChatView)
+  → POST /api/chat {message: "Tell me about Bach", conversationId: "abc-123"}
+  → ChatController.chat()
+  → ChatService.chatSync(conversationId, message)
+  → ChatClient.prompt()
+      .user("Tell me about Bach")
+      .advisors(MessageChatMemoryAdvisor: load last 20 msgs for "abc-123")
+      .call()
+  → <span class="purple">JdbcChatMemoryRepository</span>: SELECT from chat_memory WHERE conversation_id = "abc-123"
+  → <span class="pink">Ollama llama3.2</span>: Generate response with conversation context
+  → <span class="purple">JdbcChatMemoryRepository</span>: INSERT user + assistant messages
+  → Response: {response: "Johann Sebastian Bach was a...", conversationId: "abc-123"}
+</div>
+
+<h3>Flow 2: Naive RAG Query</h3>
+<div class="diagram">POST /api/rag/query?mode=naive {question: "What scales did Bach use?"}
+  → RagController.query(mode="naive")
+  → NaiveRagService.query(question)
+
+  <span class="green">Layer 1: Retrieval Gate</span>
+  → RagRetrievalGate.retrieve(question, topK=5)
+  → <span class="pink">Ollama nomic-embed-text</span>: embed("What scales did Bach use?") → [768 floats]
+  → <span class="purple">PGVector</span>: SELECT * FROM vector_store ORDER BY embedding &lt;=&gt; query_vec LIMIT 5
+  → Check: results.size() >= 2? scores >= 0.65?
+  → RetrievalResult.withData(docs)  ✓
+
+  <span class="green">Layer 2: System Prompt + LLM</span>
+  → ragChatClient.prompt().user(question).call()
+  → <span class="pink">Ollama llama3.2</span>: "Based on these excerpts: [doc1] [doc2]... Answer: What scales..."
+  → Raw answer: "Bach commonly used major and minor scales, particularly..."
+
+  <span class="green">Layer 3: Output Validation</span>
+  → OutputValidator.validate(answer, retrievedDocs)
+  → Grounding ratio: 45% of answer words found in source docs  ✓ (>= 30%)
+  → Return answer
+</div>
+
+<h3>Flow 3: Agentic RAG (MCP Tool Calling)</h3>
+<div class="diagram">POST /api/rag/query?mode=agentic {question: "Compare violin and cello"}
+  → RagController.query(mode="agentic")
+  → AgenticRagService.query(conversationId, question)
+  → agenticChatClient.prompt().user(question).call()
+
+  <span class="pink">Ollama llama3.2</span> receives prompt:
+    System: "You have tools: searchMusicKnowledge, searchByCategory, listAvailableDocuments"
+    User: "Compare violin and cello"
+
+  <span class="pink">LLM decides</span>: "I need info about both instruments. Let me search."
+    → tool_call: searchByCategory(query="violin", category="instruments")
+
+  <span class="green">MCP Client</span> (mousike) → HTTP POST → <span class="orange">MCP Server</span> (document-service)
+    → MusicKnowledgeTools.searchByCategory("violin", "instruments")
+    → PGVector search with filter: category="instruments"
+    → Returns: "[Source: instruments-encyclopedia.pdf] The violin is..."
+
+  <span class="pink">LLM receives result, decides to search again</span>:
+    → tool_call: searchByCategory(query="cello", category="instruments")
+    → (same flow, returns cello information)
+
+  <span class="pink">LLM generates final answer</span> using both tool results:
+    → "The violin and cello are both string instruments. The violin..."
+</div>
+
+<!-- ============================================================ -->
+<h2 id="rag-modes">The Three RAG Modes Compared</h2>
+<!-- ============================================================ -->
+
+<table>
+  <tr><th>Aspect</th><th>Naive</th><th>Advanced</th><th>Agentic</th></tr>
+  <tr><td><strong>How search works</strong></td><td>Direct vector search, topK=5</td><td>Advisor-based, topK=10</td><td>LLM decides when/what to search via MCP</td></tr>
+  <tr><td><strong>Who controls search</strong></td><td>Application code</td><td>Application code</td><td>The LLM itself</td></tr>
+  <tr><td><strong>Guardrails</strong></td><td>Full 3-layer</td><td>Full 3-layer</td><td>LLM-managed (no explicit gates)</td></tr>
+  <tr><td><strong>Search threshold</strong></td><td>0.65</td><td>0.65</td><td>0.65 (configured in MCP tool)</td></tr>
+  <tr><td><strong>Multi-step search</strong></td><td>No (single search)</td><td>No (single search)</td><td>Yes (LLM can call tools multiple times)</td></tr>
+  <tr><td><strong>Best for</strong></td><td>Simple, direct questions</td><td>Complex questions needing more context</td><td>Multi-faceted questions, comparisons</td></tr>
+  <tr><td><strong>Speed</strong></td><td>Fastest</td><td>Medium</td><td>Slowest (multiple LLM calls)</td></tr>
+  <tr><td><strong>Java class</strong></td><td><code>NaiveRagService</code></td><td><code>AdvancedRagService</code></td><td><code>AgenticRagService</code></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="guardrails">Anti-Hallucination Guardrails</h2>
+<!-- ============================================================ -->
+
+<div class="warn-box">
+  <div class="box-title">Hard Constraint: The LLM must NEVER be called when retrievalResult.hasData() == false</div>
+  <p>This is the most important architectural rule in Mousike. If the vector search finds no relevant documents, the system returns a safe "I don't have enough information" message without ever calling the LLM.</p>
+</div>
+
+<h3>Layer 1: Retrieval Gate (<code>RagRetrievalGate.java</code>)</h3>
+<pre><code>MINIMUM_SCORE_THRESHOLD = 0.65  // At least 65% similarity
+MINIMUM_CHUNK_COUNT = 2         // At least 2 relevant chunks
+
+if (results.isEmpty())       → RetrievalResult.noData("No results found")
+if (results.size() < 2)      → RetrievalResult.lowConfidence("Too few results")
+if (all scores < 0.65)       → RetrievalResult.noData("Scores too low")
+else                         → RetrievalResult.withData(documents)</code></pre>
+
+<h3>Layer 2: System Prompt (configured in <code>AiConfig.java</code>)</h3>
+<pre><code>System prompt for RAG client:
+"You are a music knowledge assistant. Answer ONLY based on the
+provided context. If the context doesn't contain enough information
+to answer the question, say 'I don't have enough information to
+answer that question.'"</code></pre>
+
+<h3>Layer 3: Output Validator (<code>OutputValidator.java</code>)</h3>
+<pre><code>GROUNDING_THRESHOLD = 0.30  // 30% of response words must appear in source docs
+
+1. Check: Is response empty or null? → INVALID
+2. Check: Is response a valid refusal? ("I don't have enough information") → VALID
+3. Calculate: groundingRatio = (words in response found in source docs) / (total response words)
+4. Check: groundingRatio >= 0.30? → VALID, else → INVALID (response discarded)</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="chat-memory">Chat Memory System</h2>
+<!-- ============================================================ -->
+
+<p>Mousike maintains <strong>conversation history</strong> so the LLM can reference earlier messages. For example, if you say "Tell me about Bach" then ask "What are his most famous works?", the LLM knows "his" refers to Bach.</p>
+
+<h3>How It Works</h3>
+<pre><code>// Storage: JDBC (PostgreSQL table: chat_memory)
+JdbcChatMemoryRepository → stores messages in PostgreSQL
+
+// Window: Last 20 messages per conversation
+MessageWindowChatMemory → keeps only the 20 most recent messages
+
+// Integration: MessageChatMemoryAdvisor
+// Before each LLM call:
+//   1. Load last 20 messages for this conversationId
+//   2. Prepend them to the prompt
+//   3. After response, save user + assistant messages</code></pre>
+
+<table>
+  <tr><th>Feature</th><th>Implementation</th></tr>
+  <tr><td>Storage backend</td><td>PostgreSQL via <code>JdbcChatMemoryRepository</code></td></tr>
+  <tr><td>Window size</td><td>20 messages (configurable)</td></tr>
+  <tr><td>Isolation</td><td>Per <code>conversationId</code> (UUID)</td></tr>
+  <tr><td>Clear history</td><td><code>DELETE /api/chat/{conversationId}</code></td></tr>
+  <tr><td>Advisor key</td><td><code>"chat_memory_conversation_id"</code> (string literal)</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="ingestion">Document Ingestion Pipeline</h2>
+<!-- ============================================================ -->
+
+<p>Before RAG can work, documents must be loaded into the vector database. This is done by the <strong>ingestion pipeline</strong>.</p>
+
+<h3>Two Ways to Ingest Documents</h3>
+
+<h4>1. Kubernetes Job (Bulk Loading)</h4>
+<pre><code># Apply the ingestion job manifest
+kubectl apply -f k8s/ingester/job.yaml
+
+# This runs document-service with --spring.profiles.active=ingestion,k8s
+# IngestionStartupRunner loads all docs from classpath:docs/</code></pre>
+
+<h4>2. REST API (Manual Upload)</h4>
+<pre><code># Upload a single PDF
+curl -X POST http://localhost:8091/api/ingest \
+  -F "file=@my-document.pdf" \
+  -F "category=theory"
+
+# Response: {"filename": "my-document.pdf", "chunksIngested": 42, "success": true}</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="observability">Observability Stack</h2>
+<!-- ============================================================ -->
+
+<div class="screenshot">
+  <img src="screenshots/phoenix-ui.png" alt="Phoenix UI">
+  <div class="screenshot-caption">Phoenix UI at localhost:6006 - LLM-specific trace viewer showing all AI operations</div>
+</div>
+
+<div class="screenshot">
+  <img src="screenshots/grafana-ui.png" alt="Grafana UI">
+  <div class="screenshot-caption">Grafana LGTM at localhost:3000 - Infrastructure metrics, logs, and traces</div>
+</div>
+
+<h3>Two Observability Systems</h3>
+<div class="compare-grid">
+  <div class="compare-card">
+    <h4>Phoenix (LLM-specific)</h4>
+    <ul>
+      <li>URL: <code>http://localhost:6006</code></li>
+      <li>Shows: Every LLM call (prompt, completion, tokens, latency)</li>
+      <li>Shows: Embedding calls</li>
+      <li>Shows: Tool/MCP calls</li>
+      <li>Protocol: OTLP (HTTP from mousike, gRPC from document-service)</li>
+    </ul>
+  </div>
+  <div class="compare-card">
+    <h4>Grafana LGTM (Infrastructure)</h4>
+    <ul>
+      <li>URL: <code>http://localhost:3000</code></li>
+      <li>Shows: JVM metrics (memory, GC, threads)</li>
+      <li>Shows: HTTP request metrics</li>
+      <li>Shows: Application logs (Loki)</li>
+      <li>Shows: Distributed traces (Tempo)</li>
+      <li>Protocol: OTLP HTTP + Prometheus scraping</li>
+    </ul>
+  </div>
+</div>
+
+<h3>What Gets Traced</h3>
+<p>Spring AI <strong>auto-instruments</strong> all AI operations when <code>spring.ai.*.observations.enabled=true</code>:</p>
+<ul>
+  <li>Every <code>ChatClient.call()</code> &rarr; traced with prompt text, model name, token counts</li>
+  <li>Every embedding call &rarr; traced with input text, vector dimensions</li>
+  <li>Every vector search &rarr; traced with query, results count, latency</li>
+  <li>Every MCP tool call &rarr; traced with tool name, arguments, result</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="vaadin-ui">Vaadin UI Views</h2>
+<!-- ============================================================ -->
+
+<div class="screenshot">
+  <img src="screenshots/search-view.png" alt="Search View">
+  <div class="screenshot-caption">Search View - Semantic search with optional category filtering</div>
+</div>
+
+<div class="screenshot">
+  <img src="screenshots/composer-view.png" alt="Composer View">
+  <div class="screenshot-caption">Composer View - Structured data extraction from free text</div>
+</div>
+
+<div class="screenshot">
+  <img src="screenshots/monitor-view.png" alt="Monitor View">
+  <div class="screenshot-caption">Monitor View - Links to observability dashboards</div>
+</div>
+
+<table>
+  <tr><th>View</th><th>URL</th><th>Purpose</th><th>Key IDs (for testing)</th></tr>
+  <tr><td>Chat</td><td><code>/chat</code></td><td>Conversational AI chat with streaming</td><td><code>#chat-input, #send-button, #clear-button</code></td></tr>
+  <tr><td>Search</td><td><code>/search</code></td><td>Semantic vector search + category filter</td><td><code>#search-input, #category-select, #search-button</code></td></tr>
+  <tr><td>Composer</td><td><code>/composer</code></td><td>Extract structured JSON from composer text</td><td><code>#composer-input, #extract-button, #extraction-result</code></td></tr>
+  <tr><td>Monitor</td><td><code>/monitor</code></td><td>Links to Phoenix, Grafana, actuator health</td><td><code>#phoenix-link, #grafana-link, #health-link</code></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="rest-api">REST API Reference</h2>
+<!-- ============================================================ -->
+
+<div class="screenshot">
+  <img src="screenshots/actuator-health.png" alt="Actuator Health">
+  <div class="screenshot-caption">Actuator health endpoint showing all component statuses</div>
+</div>
+
+<h3>Mousike App (localhost:8080)</h3>
+<table>
+  <tr><th>Method</th><th>Endpoint</th><th>Body</th><th>Response</th></tr>
+  <tr><td>POST</td><td><code>/api/chat</code></td><td><code>{"message": "...", "conversationId?": "..."}</code></td><td><code>{"response": "...", "conversationId": "..."}</code></td></tr>
+  <tr><td>POST</td><td><code>/api/chat/stream</code></td><td><code>{"message": "...", "conversationId?": "..."}</code></td><td>SSE stream of tokens</td></tr>
+  <tr><td>DELETE</td><td><code>/api/chat/{id}</code></td><td>-</td><td>204 No Content</td></tr>
+  <tr><td>POST</td><td><code>/api/rag/query?mode=</code></td><td><code>{"question": "..."}</code></td><td><code>{"question": "...", "answer": "...", "mode": "..."}</code></td></tr>
+  <tr><td>GET</td><td><code>/api/search?q=&amp;category=&amp;topK=</code></td><td>-</td><td><code>[{"content": "...", "metadata": {...}}]</code></td></tr>
+  <tr><td>POST</td><td><code>/api/classify</code></td><td><code>{"description": "..."}</code></td><td><code>{"classification": "{category, confidence, reasoning}"}</code></td></tr>
+  <tr><td>POST</td><td><code>/api/extract</code></td><td><code>{"text": "..."}</code></td><td><code>{"extraction": "{name, birthYear, ...}"}</code></td></tr>
+  <tr><td>GET</td><td><code>/actuator/health</code></td><td>-</td><td>Health status with components</td></tr>
+  <tr><td>GET</td><td><code>/actuator/prometheus</code></td><td>-</td><td>Prometheus metrics (text format)</td></tr>
+</table>
+
+<h3>Document Service (localhost:8091)</h3>
+<table>
+  <tr><th>Method</th><th>Endpoint</th><th>Body</th><th>Response</th></tr>
+  <tr><td>POST</td><td><code>/api/ingest</code></td><td>Multipart: file + category</td><td><code>{"filename", "chunksIngested", "success"}</code></td></tr>
+  <tr><td>GET</td><td><code>/api/documents</code></td><td>-</td><td>Document metadata</td></tr>
+  <tr><td>-</td><td><code>/mcp/sse</code></td><td>JSON-RPC (MCP protocol)</td><td>SSE stream (MCP responses)</td></tr>
+  <tr><td>GET</td><td><code>/actuator/health</code></td><td>-</td><td>Health status</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="test-setup">Manual Testing Guide</h2>
+<!-- ============================================================ -->
+
+<div class="info-box">
+  <div class="box-title">Prerequisites</div>
+  <p>All tests assume the full stack is running. Start it with: <code>./scripts/start-stack.sh --yes</code></p>
+  <p>For automated E2E tests: <code>cd e2e && npx playwright test</code></p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="test-infrastructure">Test Group 1: Infrastructure Health</h2>
+<!-- ============================================================ -->
+
+<div class="test-group">
+  <div class="test-item">
+    <div class="test-id">T-001</div>
+    <div class="test-desc">
+      <strong>All Kubernetes pods are running</strong><br>
+      <span class="test-cmd">kubectl get pods -n rag</span><br>
+      <span class="test-expect">Expected: All 7 pods show STATUS=Running, READY=1/1</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-002</div>
+    <div class="test-desc">
+      <strong>Mousike app health is UP</strong><br>
+      <span class="test-cmd">curl http://localhost:8080/actuator/health</span><br>
+      <span class="test-expect">Expected: {"status":"UP"} with components.db.status = "UP"</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-003</div>
+    <div class="test-desc">
+      <strong>Document service health is UP</strong><br>
+      <span class="test-cmd">curl http://localhost:8091/actuator/health</span><br>
+      <span class="test-expect">Expected: {"status":"UP"}</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-004</div>
+    <div class="test-desc">
+      <strong>PostgreSQL database is connected</strong><br>
+      <span class="test-cmd">curl http://localhost:8080/actuator/health | jq '.components.db'</span><br>
+      <span class="test-expect">Expected: status="UP", database="PostgreSQL"</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-005</div>
+    <div class="test-desc">
+      <strong>Ollama is running and models are loaded</strong><br>
+      <span class="test-cmd">curl http://localhost:11434/api/tags</span><br>
+      <span class="test-expect">Expected: JSON listing "llama3.2" and "nomic-embed-text" models</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-006</div>
+    <div class="test-desc">
+      <strong>Phoenix observability UI is accessible</strong><br>
+      <span class="test-cmd">curl -s http://localhost:6006/healthz</span><br>
+      <span class="test-expect">Expected: HTTP 200, or open http://localhost:6006 in browser</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-007</div>
+    <div class="test-desc">
+      <strong>Grafana dashboard is accessible</strong><br>
+      <span class="test-cmd">curl http://localhost:3000/api/health</span><br>
+      <span class="test-expect">Expected: {"database":"ok"}</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-008</div>
+    <div class="test-desc">
+      <strong>Prometheus metrics are available</strong><br>
+      <span class="test-cmd">curl http://localhost:8080/actuator/prometheus | head -20</span><br>
+      <span class="test-expect">Expected: Prometheus text format with jvm_memory_*, http_server_* metrics</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-009</div>
+    <div class="test-desc">
+      <strong>Actuator info endpoint responds</strong><br>
+      <span class="test-cmd">curl http://localhost:8080/actuator/info</span><br>
+      <span class="test-expect">Expected: HTTP 200 (may be empty JSON {})</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="test-api">Test Group 2: API Endpoints</h2>
+<!-- ============================================================ -->
+
+<div class="test-group">
+  <div class="test-item">
+    <div class="test-id">T-010</div>
+    <div class="test-desc">
+      <strong>Chat API returns a response</strong><br>
+      <span class="test-cmd">curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello, what is music?"}'</span><br>
+      <span class="test-expect">Expected: {"response": "...(non-empty text)...", "conversationId": "...(UUID)..."}</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-011</div>
+    <div class="test-desc">
+      <strong>Chat maintains conversation context</strong><br>
+      <span class="test-cmd"># First message
+curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "My favorite instrument is the cello", "conversationId": "test-ctx"}'
+# Second message
+curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is my favorite instrument?", "conversationId": "test-ctx"}'</span><br>
+      <span class="test-expect">Expected: Second response mentions "cello" (proves context is maintained)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-012</div>
+    <div class="test-desc">
+      <strong>Clear conversation history</strong><br>
+      <span class="test-cmd">curl -X DELETE http://localhost:8080/api/chat/test-ctx</span><br>
+      <span class="test-expect">Expected: HTTP 204 No Content</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-013</div>
+    <div class="test-desc">
+      <strong>Semantic search returns results</strong><br>
+      <span class="test-cmd">curl "http://localhost:8080/api/search?q=music+theory&topK=3"</span><br>
+      <span class="test-expect">Expected: JSON array of objects with "content" and "metadata" fields</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-014</div>
+    <div class="test-desc">
+      <strong>Semantic search respects topK limit</strong><br>
+      <span class="test-cmd">curl "http://localhost:8080/api/search?q=piano&topK=2"</span><br>
+      <span class="test-expect">Expected: Array with at most 2 results</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-015</div>
+    <div class="test-desc">
+      <strong>Semantic search with category filter</strong><br>
+      <span class="test-cmd">curl "http://localhost:8080/api/search?q=violin&category=instruments&topK=5"</span><br>
+      <span class="test-expect">Expected: Results where metadata.category = "instruments"</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-016</div>
+    <div class="test-desc">
+      <strong>Instrument classification</strong><br>
+      <span class="test-cmd">curl -X POST http://localhost:8080/api/classify \
+  -H "Content-Type: application/json" \
+  -d '{"description": "A large brass instrument with valves played in orchestras"}'</span><br>
+      <span class="test-expect">Expected: JSON with category (e.g., "BRASS"), confidence (0-1), reasoning</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-017</div>
+    <div class="test-desc">
+      <strong>Composer data extraction</strong><br>
+      <span class="test-cmd">curl -X POST http://localhost:8080/api/extract \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Ludwig van Beethoven was born in 1770 in Bonn, Germany. He composed 9 symphonies."}'</span><br>
+      <span class="test-expect">Expected: JSON with name, birthYear, nationality, notableWorks</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="test-rag">Test Group 3: RAG Pipeline</h2>
+<!-- ============================================================ -->
+
+<div class="test-group">
+  <div class="test-item">
+    <div class="test-id">T-020</div>
+    <div class="test-desc">
+      <strong>Naive RAG returns an answer</strong><br>
+      <span class="test-cmd">curl -X POST "http://localhost:8080/api/rag/query?mode=naive" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is a musical scale?"}'</span><br>
+      <span class="test-expect">Expected: {"question": "...", "answer": "...(substantive answer)...", "mode": "naive"}</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-021</div>
+    <div class="test-desc">
+      <strong>Advanced RAG returns a richer answer</strong><br>
+      <span class="test-cmd">curl -X POST "http://localhost:8080/api/rag/query?mode=advanced" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Explain the difference between major and minor scales"}'</span><br>
+      <span class="test-expect">Expected: Detailed answer with more context (topK=10 retrieves more docs)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-022</div>
+    <div class="test-desc">
+      <strong>Agentic RAG uses MCP tools</strong><br>
+      <span class="test-cmd">curl -X POST "http://localhost:8080/api/rag/query?mode=agentic" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Tell me about famous violin compositions"}'</span><br>
+      <span class="test-expect">Expected: Answer (may be slower due to tool calls). Check Phoenix traces to see tool invocations.</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-023</div>
+    <div class="test-desc">
+      <strong>RAG guardrails block out-of-domain queries</strong><br>
+      <span class="test-cmd">curl -X POST "http://localhost:8080/api/rag/query?mode=naive" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is the capital of France?"}'</span><br>
+      <span class="test-expect">Expected: Answer contains "I don't have enough information" (guardrails block non-music queries)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-024</div>
+    <div class="test-desc">
+      <strong>RAG guardrails block nonsense queries</strong><br>
+      <span class="test-cmd">curl -X POST "http://localhost:8080/api/rag/query?mode=naive" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "asdfghjkl zxcvbnm"}'</span><br>
+      <span class="test-expect">Expected: "I don't have enough information" (no relevant vectors found)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-025</div>
+    <div class="test-desc">
+      <strong>Default RAG mode is "advanced"</strong><br>
+      <span class="test-cmd">curl -X POST "http://localhost:8080/api/rag/query" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is harmony?"}'</span><br>
+      <span class="test-expect">Expected: mode="advanced" in response (default when no mode parameter)</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="test-ui">Test Group 4: UI Tests</h2>
+<!-- ============================================================ -->
+
+<div class="test-group">
+  <div class="test-item">
+    <div class="test-id">T-030</div>
+    <div class="test-desc">
+      <strong>Chat page loads</strong><br>
+      <span class="test-cmd">Open http://localhost:8080/chat in browser</span><br>
+      <span class="test-expect">Expected: Page with "Composer Assistant Chat" heading, text input, and Send button</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-031</div>
+    <div class="test-desc">
+      <strong>Send a chat message via UI</strong><br>
+      <span class="test-cmd">Type "Hello" in the input field and click Send</span><br>
+      <span class="test-expect">Expected: Your message appears as a user bubble. After a few seconds, an assistant response appears below.</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-032</div>
+    <div class="test-desc">
+      <strong>Clear chat history via UI</strong><br>
+      <span class="test-cmd">Click the "Clear" button</span><br>
+      <span class="test-expect">Expected: Chat history is cleared, starting a fresh conversation</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-033</div>
+    <div class="test-desc">
+      <strong>Search page loads and works</strong><br>
+      <span class="test-cmd">Navigate to http://localhost:8080/search, type "Bach" and click Search</span><br>
+      <span class="test-expect">Expected: Grid shows search results with content and metadata columns</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-034</div>
+    <div class="test-desc">
+      <strong>Composer extraction page works</strong><br>
+      <span class="test-cmd">Navigate to /composer, paste "Mozart was born in 1756 in Salzburg" and click Extract</span><br>
+      <span class="test-expect">Expected: JSON output with extracted fields (name, birthYear, nationality)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-035</div>
+    <div class="test-desc">
+      <strong>Monitor page has correct links</strong><br>
+      <span class="test-cmd">Navigate to http://localhost:8080/monitor</span><br>
+      <span class="test-expect">Expected: Links to Phoenix (localhost:6006), Grafana (localhost:3000), and actuator/health</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-036</div>
+    <div class="test-desc">
+      <strong>Navigation sidebar works</strong><br>
+      <span class="test-cmd">Click each link in the sidebar: Chat, Search, Composer, Monitor</span><br>
+      <span class="test-expect">Expected: Each view loads correctly without errors</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="test-observability">Test Group 5: Observability</h2>
+<!-- ============================================================ -->
+
+<div class="test-group">
+  <div class="test-item">
+    <div class="test-id">T-040</div>
+    <div class="test-desc">
+      <strong>Phoenix shows LLM traces</strong><br>
+      <span class="test-cmd">1. Send a chat message via API or UI<br>2. Open http://localhost:6006</span><br>
+      <span class="test-expect">Expected: Phoenix shows recent traces with model=llama3.2, showing prompt/completion text</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-041</div>
+    <div class="test-desc">
+      <strong>Phoenix shows embedding traces</strong><br>
+      <span class="test-cmd">1. Send a search query<br>2. Check Phoenix for embedding spans</span><br>
+      <span class="test-expect">Expected: Traces show nomic-embed-text embedding calls with vector dimensions</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-042</div>
+    <div class="test-desc">
+      <strong>Grafana shows JVM metrics</strong><br>
+      <span class="test-cmd">Open http://localhost:3000, explore Prometheus datasource, query: jvm_memory_used_bytes</span><br>
+      <span class="test-expect">Expected: Graph showing memory usage for mousike and document-service</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-043</div>
+    <div class="test-desc">
+      <strong>AI operation metrics are tracked</strong><br>
+      <span class="test-cmd">curl http://localhost:8080/actuator/prometheus | grep gen_ai</span><br>
+      <span class="test-expect">Expected: gen_ai_client_operation_seconds_count metrics (increases after LLM calls)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-044</div>
+    <div class="test-desc">
+      <strong>Vector store metrics are tracked</strong><br>
+      <span class="test-cmd">curl http://localhost:8080/actuator/prometheus | grep db_vector</span><br>
+      <span class="test-expect">Expected: db_vector_client_operation_seconds metrics after search operations</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="test-edge-cases">Test Group 6: Edge Cases & Error Handling</h2>
+<!-- ============================================================ -->
+
+<div class="test-group">
+  <div class="test-item">
+    <div class="test-id">T-050</div>
+    <div class="test-desc">
+      <strong>Empty chat message</strong><br>
+      <span class="test-cmd">curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": ""}'</span><br>
+      <span class="test-expect">Expected: Error response or empty handling (should not crash)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-051</div>
+    <div class="test-desc">
+      <strong>Very long chat message</strong><br>
+      <span class="test-cmd">Send a message with 1000+ characters</span><br>
+      <span class="test-expect">Expected: LLM processes it (may be truncated by context window of 4096 tokens)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-052</div>
+    <div class="test-desc">
+      <strong>Search with no results</strong><br>
+      <span class="test-cmd">curl "http://localhost:8080/api/search?q=xyznonexistent123&topK=5"</span><br>
+      <span class="test-expect">Expected: Empty array [] (no crash, no error)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-053</div>
+    <div class="test-desc">
+      <strong>Delete non-existent conversation</strong><br>
+      <span class="test-cmd">curl -X DELETE http://localhost:8080/api/chat/nonexistent-id</span><br>
+      <span class="test-expect">Expected: HTTP 204 (idempotent, no error)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-054</div>
+    <div class="test-desc">
+      <strong>Concurrent chat sessions are isolated</strong><br>
+      <span class="test-cmd">Send messages with conversationId="session-A" and conversationId="session-B"</span><br>
+      <span class="test-expect">Expected: Each session has independent memory (context doesn't leak)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-055</div>
+    <div class="test-desc">
+      <strong>Invalid RAG mode defaults to advanced</strong><br>
+      <span class="test-cmd">curl -X POST "http://localhost:8080/api/rag/query?mode=invalid" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "test"}'</span><br>
+      <span class="test-expect">Expected: Falls through to "advanced" mode (default case in switch)</span>
+    </div>
+  </div>
+  <div class="test-item">
+    <div class="test-id">T-056</div>
+    <div class="test-desc">
+      <strong>Document service MCP endpoint is reachable</strong><br>
+      <span class="test-cmd">curl -v http://localhost:8091/mcp/sse</span><br>
+      <span class="test-expect">Expected: SSE connection opened (Content-Type: text/event-stream)</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>Quick Reference: Run All Tests</h2>
+<!-- ============================================================ -->
+
+<pre><code># Automated E2E tests (API + UI + Full-Stack)
+cd e2e && npx playwright test
+
+# API tests only
+npx playwright test --project=api
+
+# UI tests only
+npx playwright test --project=ui
+
+# Full-stack tests (infrastructure through tracing)
+npx playwright test --project=full-stack
+
+# Manual sanity check (from start-stack.sh)
+./scripts/start-stack.sh --yes  # Includes 15 automated sanity checks
+
+# View test report
+npx playwright show-report</code></pre>
+
+<a href="#what-is-mousike" class="back-top" title="Back to top">&#8679;</a>
+
+</main>
+</div>
+</body>
+</html>
